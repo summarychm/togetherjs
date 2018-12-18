@@ -10,17 +10,12 @@ var vars = {
   enableExample: false,
   enableHome: false,
   GA_ACCOUNT: "UA-35433268-28",
-  base: ""
+  base: "",
+  TESTDIR:"test-build",
 };
-
-var TESTDIR = "test-build";
-
+// grunt.option 读取命令行设置的参数
 module.exports = function (grunt) {
-
-  if (! grunt.option("dest")) {
-    grunt.option("dest", "build");
-  }
-
+  if (! grunt.option("dest")) grunt.option("dest", "build");
   var dumpLineNumbers = false;
   if (grunt.option("less-line-numbers")) {
     grunt.verbose.writeln("Enabling LESS line numbers");
@@ -673,10 +668,10 @@ module.exports = function (grunt) {
           if (err1 || err2) { return done(err1 || err2); }
 
           // build togetherjs using these default ports
-          grunt.option("base-url", "http://localhost:"+webPort+"/"+TESTDIR+"/");
+          grunt.option("base-url", "http://localhost:"+webPort+"/"+vars.TESTDIR+"/");
           grunt.option("hub-url", "http://localhost:"+hubPort);
           grunt.option("no-hardlink", true);
-          grunt.option("dest", TESTDIR);
+          grunt.option("dest", vars.TESTDIR);
           // make sure the web server will use the right port
           grunt.config.merge({
             'http-server': {

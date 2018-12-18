@@ -1,119 +1,76 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
-
 /*jshint scripturl:true */
+// 未压缩模式,采用require方式整合
+// min模式,将所有code 都压缩的一个js文件中
 (function () {
 
+  function addStyle() {
+    var existing = document.getElementById("togetherjs-stylesheet");
+    if (!existing) {
+      var link = document.createElement("link");
+      link.id = "togetherjs-stylesheet";
+      link.setAttribute("rel", "stylesheet");
+      link.href = baseUrl + styleSheet +
+        (cacheBust ? ("?bust=" + cacheBust) : '');
+      document.head.appendChild(link);
+    }
+  }
+
+  function addScript(url) {
+    var script = document.createElement("script");
+    script.src = baseUrl + url +
+      (cacheBust ? ("?bust=" + cacheBust) : '');
+    document.head.appendChild(script);
+  }
+
   var defaultConfiguration = {
-    // Disables clicks for a certain element.
-    // (e.g., 'canvas' would not show clicks on canvas elements.)
-    // Setting this to true will disable clicks globally.
-    dontShowClicks: false,
-    // Experimental feature to echo clicks to certain elements across clients:
-    cloneClicks: false,
     // Enable Mozilla or Google analytics on the page when TogetherJS is activated:
     // FIXME: these don't seem to be working, and probably should be removed in favor
     // of the hub analytics
     enableAnalytics: false,
     // The code to enable (this is defaulting to a Mozilla code):
     analyticsCode: "UA-35433268-28",
-    // The base URL of the hub (gets filled in below):
-    hubBase: null,
-    // A function that will return the name of the user:
-    getUserName: null,
-    // A function that will return the color of the user:
-    getUserColor: null,
-    // A function that will return the avatar of the user:
-    getUserAvatar: null,
     // The siteName is used in the walkthrough (defaults to document.title):
     siteName: null,
-    // Whether to use the minimized version of the code (overriding the built setting)
-    useMinimizedCode: undefined,
-    // Append cache-busting queries (useful for development!)
-    cacheBust: true,
-    // Any events to bind to
-    on: {},
-    // Hub events to bind to
-    hub_on: {},
-    // Enables the alt-T alt-T TogetherJS shortcut; however, this setting
-    // must be enabled early as TogetherJSConfig_enableShortcut = true;
-    enableShortcut: false,
     // The name of this tool as provided to users.  The UI is updated to use this.
     // Because of how it is used in text it should be a proper noun, e.g.,
     // "MySite's Collaboration Tool"
     toolName: null,
-    // Used to auto-start TogetherJS with a {prefix: pageName, max: participants}
-    // Also with findRoom: "roomName" it will connect to the given room name
-    findRoom: null,
-    // If true, starts TogetherJS automatically (of course!)
-    autoStart: false,
-    // If true, then the "Join TogetherJS Session?" confirmation dialog
-    // won't come up
-    suppressJoinConfirmation: false,
-    // If true, then the "Invite a friend" window won't automatically come up
-    suppressInvite: false,
-    // A room in which to find people to invite to this session,
-    inviteFromRoom: null,
-    // This is used to keep sessions from crossing over on the same
-    // domain, if for some reason you want sessions that are limited
-    // to only a portion of the domain:
-    storagePrefix: "togetherjs",
-    // When true, we treat the entire URL, including the hash, as the identifier
-    // of the page; i.e., if you one person is on `http://example.com/#view1`
-    // and another person is at `http://example.com/#view2` then these two people
-    // are considered to be at completely different URLs
-    includeHashInUrl: false,
-    // When true, the WebRTC-based mic/chat will be disabled
-    disableWebRTC: false,
     // When true, youTube videos will synchronize
     youtube: true,
-    // Ignores the following console messages, disables all messages if set to true
-    ignoreMessages: ["cursor-update", "keydown", "scroll-update"],
-    // Ignores the following forms (will ignore all forms if set to true):
-    ignoreForms: [":password"],
-    // When undefined, attempts to use the browser's language
-    lang: undefined,
-    fallbackLang: "en-US"
+
+
+    dontShowClicks: false, // 是否禁用波浪提示,可以选择器
+    cloneClicks: false, // 是否同步用户点击
+    hubBase: null, // server地址
+    getUserName: null, // 获取用户名,函数/变量
+    getUserColor: null, //用户使用的颜色
+    getUserAvatar: null, // 用户头像
+    useMinimizedCode: undefined, // 是否使用minimizedCode
+    cacheBust: true, // 其否开发模式,开启hash
+    on: {}, // Any events to bind to
+    hub_on: {}, // Hub events to bind to
+    findRoom: null, //room配置,字符串或对象(prefix,max)
+    autoStart: false, // 是否自动启动
+    suppressJoinConfirmation: false, // 是否启动join提示
+    suppressInvite: false, //是否弹出邀请窗口
+    inviteFromRoom: null, //邀请同房间的其他人
+    storagePrefix: "togetherjs", // 本地存储时的前缀
+    includeHashInUrl: false, // url强验证
+    disableWebRTC: false, // 禁用音视频
+    ignoreMessages: ["cursor-update", "keydown", "scroll-update"], //控制台要屏蔽的事件类型
+    ignoreForms: [":password"], //要忽略的表单元素
+    lang: undefined, //默认语言
+    fallbackLang: "en-US" // 备用语言
   };
 
   var styleSheet = "/togetherjs/togetherjs.css";
-
-  var baseUrl = "__baseUrl__";
-  if (baseUrl == "__" + "baseUrl__") {
-    // Reset the variable if it doesn't get substituted
-    baseUrl = "";
-  }
-  // Allow override of baseUrl (this is done separately because it needs
-  // to be done very early)
-  if (window.TogetherJSConfig && window.TogetherJSConfig.baseUrl) {
-    baseUrl = window.TogetherJSConfig.baseUrl;
-  }
-  if (window.TogetherJSConfig_baseUrl) {
-    baseUrl = window.TogetherJSConfig_baseUrl;
-  }
-  defaultConfiguration.baseUrl = baseUrl;
-
   // True if this file should use minimized sub-resources:
-  var min = "__min__" == "__" + "min__" ? false : "__min__" == "yes";
-
-  var baseUrlOverride = localStorage.getItem("togetherjs.baseUrlOverride");
-  if (baseUrlOverride) {
-    try {
-      baseUrlOverride = JSON.parse(baseUrlOverride);
-    } catch (e) {
-      baseUrlOverride = null;
-    }
-    if ((! baseUrlOverride) || baseUrlOverride.expiresAt < Date.now()) {
-      // Ignore because it has expired
-      localStorage.removeItem("togetherjs.baseUrlOverride");
-    } else {
-      baseUrl = baseUrlOverride.baseUrl;
-      var logger = console.warn || console.log;
-      logger.call(console, "Using TogetherJS baseUrlOverride:", baseUrl);
-      logger.call(console, "To undo run: localStorage.removeItem('togetherjs.baseUrlOverride')");
-    }
-  }
+  var min = false;
+  var version = "unknown";
+  var cacheBust = Date.now() + "";
 
   var configOverride = localStorage.getItem("togetherjs.configOverride");
   if (configOverride) {
@@ -122,53 +79,41 @@
     } catch (e) {
       configOverride = null;
     }
-    if ((! configOverride) || configOverride.expiresAt < Date.now()) {
+    if ((!configOverride) || configOverride.expiresAt < Date.now()) {
       localStorage.removeItem("togetherjs.configOverride");
     } else {
-      var shownAny = false;
       for (var attr in configOverride) {
-        if (! configOverride.hasOwnProperty(attr)) {
-          continue;
-        }
-        if (attr == "expiresAt" || ! configOverride.hasOwnProperty(attr)) {
-          continue;
-        }
-        if (! shownAny) {
-          console.warn("Using TogetherJS configOverride");
-          console.warn("To undo run: localStorage.removeItem('togetherjs.configOverride')");
-        }
+        if (!configOverride.hasOwnProperty(attr)) continue;
+        if (attr == "expiresAt" || !configOverride.hasOwnProperty(attr)) continue;
         window["TogetherJSConfig_" + attr] = configOverride[attr];
         console.log("Config override:", attr, "=", configOverride[attr]);
       }
     }
   }
 
-  var version = "unknown";
-  // FIXME: we could/should use a version from the checkout, at least
-  // for production
-  var cacheBust = "__gitCommit__";
-  if ((! cacheBust) || cacheBust == "__gitCommit__") {
-    cacheBust = Date.now() + "";
-  } else {
-    version = cacheBust;
-  }
-
-  // Make sure we have all of the console.* methods:
-  if (typeof console == "undefined") {
-    console = {};
-  }
-  if (! console.log) {
-    console.log = function () {};
-  }
-  ["debug", "info", "warn", "error"].forEach(function (method) {
-    if (! console[method]) {
-      console[method] = console.log;
+  /******** 尝试从全局配置,local中读取baseUrl begin ********/
+  var baseUrl = "__baseUrl__";
+  if (window.TogetherJSConfig && window.TogetherJSConfig.baseUrl)
+    baseUrl = window.TogetherJSConfig.baseUrl;
+  if (window.TogetherJSConfig_baseUrl)
+    baseUrl = window.TogetherJSConfig_baseUrl;
+  defaultConfiguration.baseUrl = baseUrl;
+  var baseUrlOverride = localStorage.getItem("togetherjs.baseUrlOverride");
+  if (baseUrlOverride) {
+    try {
+      baseUrlOverride = JSON.parse(baseUrlOverride);
+    } catch (e) {
+      baseUrlOverride = null;
     }
-  });
+    if ((!baseUrlOverride) || baseUrlOverride.expiresAt < Date.now())
+      localStorage.removeItem("togetherjs.baseUrlOverride");
+    else
+      baseUrl = baseUrlOverride.baseUrl;
+  }
 
-  if (! baseUrl) {
+  if (!baseUrl) {
     var scripts = document.getElementsByTagName("script");
-    for (var i=0; i<scripts.length; i++) {
+    for (var i = 0; i < scripts.length; i++) {
       var src = scripts[i].src;
       if (src && src.search(/togetherjs(-min)?.js(\?.*)?$/) !== -1) {
         baseUrl = src.replace(/\/*togetherjs(-min)?.js(\?.*)?$/, "");
@@ -181,138 +126,84 @@
       }
     }
   }
-  if (! baseUrl) {
+  if (!baseUrl) {
     console.warn("Could not determine TogetherJS's baseUrl (looked for a <script> with togetherjs.js and togetherjs-min.js)");
   }
+  /******** baseUrl end ********/
 
-  function addStyle() {
-    var existing = document.getElementById("togetherjs-stylesheet");
-    if (! existing) {
-      var link = document.createElement("link");
-      link.id = "togetherjs-stylesheet";
-      link.setAttribute("rel", "stylesheet");
-      link.href = baseUrl + styleSheet +
-	(cacheBust ? ("?bust=" + cacheBust) : '');
-      document.head.appendChild(link);
-    }
-  }
-
-  function addScript(url) {
-    var script = document.createElement("script");
-    script.src = baseUrl + url +
-      (cacheBust ? ("?bust=" + cacheBust) : '');
-    document.head.appendChild(script);
-  }
-
-  var TogetherJS = window.TogetherJS = function TogetherJS(event) {
+  // TogetherJ主体类
+  window.TogetherJS = function TogetherJS(event) {
     var session;
     if (TogetherJS.running) {
       session = TogetherJS.require("session");
       session.close();
       return;
     }
-    TogetherJS.startup.button = null;
+    TogetherJS.startup.button = null; // 触发DOM
     try {
       if (event && typeof event == "object") {
-        if (event.target && typeof event) {
+        if (event.target && typeof event)
           TogetherJS.startup.button = event.target;
-        } else if (event.nodeType == 1) {
+        else if (event.nodeType == 1)
           TogetherJS.startup.button = event;
-        } else if (event[0] && event[0].nodeType == 1) {
-          // Probably a jQuery element
-          TogetherJS.startup.button = event[0];
-        }
+        else if (event[0] && event[0].nodeType == 1)
+          TogetherJS.startup.button = event[0]; //jq
       }
     } catch (e) {
       console.warn("Error determining starting button:", e);
     }
-    if (window.TowTruckConfig) {
-      console.warn("TowTruckConfig is deprecated; please use TogetherJSConfig");
-      if (window.TogetherJSConfig) {
-        console.warn("Ignoring TowTruckConfig in favor of TogetherJSConfig");
-      } else {
-        window.TogetherJSConfig = TowTruckConfig;
-      }
-    }
-    if (window.TogetherJSConfig && (! window.TogetherJSConfig.loaded)) {
+
+    if (window.TogetherJSConfig && (!window.TogetherJSConfig.loaded)) {
       TogetherJS.config(window.TogetherJSConfig);
       window.TogetherJSConfig.loaded = true;
     }
 
-    // This handles loading configuration from global variables.  This
-    // includes TogetherJSConfig_on_*, which are attributes folded into
-    // the "on" configuration value.
+
     var attr;
     var attrName;
-    var globalOns = {};
+    var globalOns = {}; // 存放回调事件集合
     for (attr in window) {
-      if (attr.indexOf("TogetherJSConfig_on_") === 0) {
+      if (attr.indexOf("TogetherJSConfig_on_") === 0) { //先检测事件
         attrName = attr.substr(("TogetherJSConfig_on_").length);
         globalOns[attrName] = window[attr];
-      } else if (attr.indexOf("TogetherJSConfig_") === 0) {
+      } else if (attr.indexOf("TogetherJSConfig_") === 0) { // 再检测属性
         attrName = attr.substr(("TogetherJSConfig_").length);
         TogetherJS.config(attrName, window[attr]);
-      } else if (attr.indexOf("TowTruckConfig_on_") === 0) {
-        attrName = attr.substr(("TowTruckConfig_on_").length);
-        console.warn("TowTruckConfig_* is deprecated, please rename", attr, "to TogetherJSConfig_on_" + attrName);
-        globalOns[attrName] = window[attr];
-      } else if (attr.indexOf("TowTruckConfig_") === 0) {
-        attrName = attr.substr(("TowTruckConfig_").length);
-        console.warn("TowTruckConfig_* is deprecated, please rename", attr, "to TogetherJSConfig_" + attrName);
-        TogetherJS.config(attrName, window[attr]);
       }
-
-
     }
-    // FIXME: copy existing config?
-    // FIXME: do this directly in TogetherJS.config() ?
-    // FIXME: close these configs?
     var ons = TogetherJS.config.get("on");
-    for (attr in globalOns) {
-      if (globalOns.hasOwnProperty(attr)) {
-        // FIXME: should we avoid overwriting?  Maybe use arrays?
-        ons[attr] = globalOns[attr];
-      }
-    }
-    TogetherJS.config("on", ons);
-    for (attr in ons) {
-      TogetherJS.on(attr, ons[attr]);
-    }
+    for (attr in globalOns)
+      ons[attr] = globalOns[attr];
+    TogetherJS.config("on", ons); //更新配置
+    for (attr in ons)
+      TogetherJS.on(attr, ons[attr]); //绑定事件
+
     var hubOns = TogetherJS.config.get("hub_on");
     if (hubOns) {
       for (attr in hubOns) {
-        if (hubOns.hasOwnProperty(attr)) {
+        if (hubOns.hasOwnProperty(attr))
           TogetherJS.hub.on(attr, hubOns[attr]);
-        }
       }
     }
     if (!TogetherJS.config.close('cacheBust')) {
       cacheBust = '';
       delete TogetherJS.requireConfig.urlArgs;
     }
-
-    if (! TogetherJS.startup.reason) {
-      // Then a call to TogetherJS() from a button must be started TogetherJS
+    if (!TogetherJS.startup.reason)
       TogetherJS.startup.reason = "started";
-    }
-
-    // FIXME: maybe I should just test for TogetherJS.require:
-    if (TogetherJS._loaded) {
+    if (TogetherJS._loaded) { //_loaded属性为真(延迟执行)就直接启动,并停止继续执行
       session = TogetherJS.require("session");
       addStyle();
-      session.start();
-      return;
+      return session.start();
     }
-    // A sort of signal to session.js to tell it to actually
-    // start itself (i.e., put up a UI and try to activate)
+    // A sort of signal to session.js to tell it to actually start itself (i.e., put up a UI and try to activate)
     TogetherJS.startup._launch = true;
-
     addStyle();
     var minSetting = TogetherJS.config.get("useMinimizedCode");
     TogetherJS.config.close("useMinimizedCode");
-    if (minSetting !== undefined) {
-      min = !! minSetting;
-    }
+    if (minSetting !== undefined)
+      min = !!minSetting;
+
     var requireConfig = TogetherJS._extend(TogetherJS.requireConfig);
     var deps = ["session", "jquery"];
     var lang = TogetherJS.getConfig("lang");
@@ -320,40 +211,34 @@
     var availableTranslations = {
       "en-US": true,
       "en": "en-US",
-      "es": "es-BO",
-      "es-BO": true,
-      "ru": true,
-      "ru-RU": "ru",
-      "pl": "pl-PL",
-      "pl-PL": true
+      // "es": "es-BO",
+      // "es-BO": true,
+      // "ru": true,
+      // "ru-RU": "ru",
+      // "pl": "pl-PL",
+      // "pl-PL": true
     };
-
-    if(lang === undefined) {
-      // BCP 47 mandates hyphens, not underscores, to separate lang parts
+    if (lang === undefined)
       lang = navigator.language.replace(/_/g, "-");
-    }
-    if (/-/.test(lang) && !availableTranslations[lang]) {
+    if (/-/.test(lang) && !availableTranslations[lang])
       lang = lang.replace(/-.*$/, '');
-    }
-    if (!availableTranslations[lang]) {
-      lang = TogetherJS.config.get("fallbackLang");
-    } else if (availableTranslations[lang] !== true) {
-      lang = availableTranslations[lang];
-    }
+    if (!availableTranslations[lang])
+      lang = availableTranslations["en-US"];
     TogetherJS.config("lang", lang);
-
     var localeTemplates = "templates-" + lang;
     deps.splice(0, 0, localeTemplates);
     function callback(session, jquery) {
       TogetherJS._loaded = true;
-      if (! min) {
-        TogetherJS.require = require.config({context: "togetherjs"});
+      if (!min) {
+        TogetherJS.require = require.config({
+          context: "togetherjs"
+        });
         TogetherJS._requireObject = require;
       }
     }
-    if (! min) {
+    if (!min) {
       if (typeof require == "function") {
-        if (! require.config) {
+        if (!require.config) {
           console.warn("The global require (", require, ") is not requirejs; please use togetherjs-min.js");
           throw new Error("Conflict with window.require");
         }
@@ -366,7 +251,7 @@
     } else {
       requireConfig.deps = deps;
       requireConfig.callback = callback;
-      if (! min) {
+      if (!min) {
         window.require = requireConfig;
       }
     }
@@ -380,7 +265,7 @@
   TogetherJS.pageLoaded = Date.now();
 
   TogetherJS._extend = function (base, extensions) {
-    if (! extensions) {
+    if (!extensions) {
       extensions = base;
       base = {};
     }
@@ -451,10 +336,10 @@
           console.trace();
         }
       }
-      if (! this._listeners) {
+      if (!this._listeners) {
         this._listeners = {};
       }
-      if (! this._listeners[name]) {
+      if (!this._listeners[name]) {
         this._listeners[name] = [];
       }
       if (this._listeners[name].indexOf(callback) == -1) {
@@ -468,7 +353,7 @@
       }
       var attr = "onceCallback_" + name;
       // FIXME: maybe I should add the event name to the .once attribute:
-      if (! callback[attr]) {
+      if (!callback[attr]) {
         callback[attr] = function onceCallback() {
           callback.apply(this, arguments);
           this.off(name, onceCallback);
@@ -490,11 +375,12 @@
         }, this);
         return;
       }
-      if ((! this._listeners) || ! this._listeners[name]) {
+      if ((!this._listeners) || !this._listeners[name]) {
         return;
       }
-      var l = this._listeners[name], _len = l.length;
-      for (var i=0; i<_len; i++) {
+      var l = this._listeners[name],
+        _len = l.length;
+      for (var i = 0; i < _len; i++) {
         if (l[i] == callback) {
           l.splice(i, 1);
           break;
@@ -503,7 +389,7 @@
     };
     proto.emit = function emit(name) {
       var offs = this._listenerOffs = [];
-      if ((! this._listeners) || ! this._listeners[name]) {
+      if ((!this._listeners) || !this._listeners[name]) {
         return;
       }
       var args = Array.prototype.slice.call(arguments, 1);
@@ -542,7 +428,7 @@
   };
 
   var defaultHubBase = "__hubUrl__";
-  if (defaultHubBase == "__" + "hubUrl"+ "__") {
+  if (defaultHubBase == "__" + "hubUrl" + "__") {
     // Substitution wasn't made
     defaultHubBase = "https://hub.togetherjs.mozillalabs.com";
   }
@@ -579,8 +465,6 @@
     // Hub events to bind to
     hub_on: {},
     // Enables the alt-T alt-T TogetherJS shortcut; however, this setting
-    // must be enabled early as TogetherJSConfig_enableShortcut = true;
-    enableShortcut: false,
     // The name of this tool as provided to users.  The UI is updated to use this.
     // Because of how it is used in text it should be a proper noun, e.g.,
     // "MySite's Collaboration Tool"
@@ -619,7 +503,7 @@
   TogetherJS.getConfig = function (name) { // rename into TogetherJS.config.get()?
     var value = TogetherJS._configuration[name];
     if (value === undefined) {
-      if (! TogetherJS._defaultConfiguration.hasOwnProperty(name)) {
+      if (!TogetherJS._defaultConfiguration.hasOwnProperty(name)) {
         console.error("Tried to load unknown configuration value:", name);
       }
       value = TogetherJS._defaultConfiguration[name];
@@ -660,13 +544,13 @@
       }
     }
     for (attr in settings) {
-      if (! settings.hasOwnProperty(attr)) {
+      if (!settings.hasOwnProperty(attr)) {
         continue;
       }
       if (attr == "loaded" || attr == "callToStart") {
         continue;
       }
-      if (! TogetherJS._defaultConfiguration.hasOwnProperty(attr)) {
+      if (!TogetherJS._defaultConfiguration.hasOwnProperty(attr)) {
         console.warn("Unknown configuration value passed to TogetherJS.config():", attr);
       }
       var previous = TogetherJS._configuration[attr];
@@ -674,26 +558,26 @@
       TogetherJS._configuration[attr] = value;
       var trackers = TogetherJS._configTrackers[name] || [];
       var failed = false;
-      for (i=0; i<trackers.length; i++) {
+      for (i = 0; i < trackers.length; i++) {
         try {
           tracker = trackers[i];
           tracker(value, previous);
         } catch (e) {
           console.warn("Error setting configuration", name, "to", value,
-                       ":", e, "; reverting to", previous);
+            ":", e, "; reverting to", previous);
           failed = true;
           break;
         }
       }
       if (failed) {
         TogetherJS._configuration[attr] = previous;
-        for (i=0; i<trackers.length; i++) {
+        for (i = 0; i < trackers.length; i++) {
           try {
             tracker = trackers[i];
             tracker(value);
           } catch (e) {
             console.warn("Error REsetting configuration", name, "to", previous,
-                         ":", e, "(ignoring)");
+              ":", e, "(ignoring)");
           }
         }
       }
@@ -703,7 +587,7 @@
   TogetherJS.config.get = function (name) {
     var value = TogetherJS._configuration[name];
     if (value === undefined) {
-      if (! TogetherJS._defaultConfiguration.hasOwnProperty(name)) {
+      if (!TogetherJS._defaultConfiguration.hasOwnProperty(name)) {
         console.error("Tried to load unknown configuration value:", name);
       }
       value = TogetherJS._defaultConfiguration[name];
@@ -712,11 +596,11 @@
   };
 
   TogetherJS.config.track = function (name, callback) {
-    if (! TogetherJS._defaultConfiguration.hasOwnProperty(name)) {
+    if (!TogetherJS._defaultConfiguration.hasOwnProperty(name)) {
       throw new Error("Configuration is unknown: " + name);
     }
     callback(TogetherJS.config.get(name));
-    if (! TogetherJS._configTrackers[name]) {
+    if (!TogetherJS._configTrackers[name]) {
       TogetherJS._configTrackers[name] = [];
     }
     TogetherJS._configTrackers[name].push(callback);
@@ -724,7 +608,7 @@
   };
 
   TogetherJS.config.close = function (name) {
-    if (! TogetherJS._defaultConfiguration.hasOwnProperty(name)) {
+    if (!TogetherJS._defaultConfiguration.hasOwnProperty(name)) {
       throw new Error("Configuration is unknown: " + name);
     }
     TogetherJS._configClosed[name] = true;
@@ -741,7 +625,7 @@
   };
 
   TogetherJS.refreshUserData = function () {
-    if (TogetherJS.running && typeof TogetherJS.require ==  "function") {
+    if (TogetherJS.running && typeof TogetherJS.require == "function") {
       TogetherJS.require(["session"], function (session) {
         session.emit("refresh-user-data");
       });
@@ -767,7 +651,7 @@
   };
 
   TogetherJS.send = function (msg) {
-    if (! TogetherJS.require) {
+    if (!TogetherJS.require) {
       throw "You cannot use TogetherJS.send() when TogetherJS is not running";
     }
     var session = TogetherJS.require("session");
@@ -775,7 +659,7 @@
   };
 
   TogetherJS.shareUrl = function () {
-    if (! TogetherJS.require) {
+    if (!TogetherJS.require) {
       return null;
     }
     var session = TogetherJS.require("session");
@@ -809,15 +693,6 @@
       listener = null;
     }
   };
-
-  TogetherJS.config.track("enableShortcut", function (enable, previous) {
-    if (enable) {
-      TogetherJS.listenForShortcut();
-    } else if (previous) {
-      TogetherJS.removeShortcut();
-    }
-  });
-
   TogetherJS.checkForUsersOnChannel = function (address, callback) {
     if (address.search(/^https?:/i) === 0) {
       address = address.replace(/^http/i, 'ws');
@@ -840,7 +715,7 @@
       callback(msg.peerCount);
     };
     socket.onclose = socket.onerror = function () {
-      if (! gotAnswer) {
+      if (!gotAnswer) {
         console.warn("Socket was closed without receiving answer");
         gotAnswer = true;
         callback(undefined);
@@ -871,10 +746,6 @@
     }
     // A page can define this function to defer TogetherJS from starting
     var callToStart = window.TogetherJSConfig_callToStart;
-    if (! callToStart && window.TowTruckConfig_callToStart) {
-      callToStart = window.TowTruckConfig_callToStart;
-      console.warn("Please rename TowTruckConfig_callToStart to TogetherJSConfig_callToStart");
-    }
     if (window.TogetherJSConfig && window.TogetherJSConfig.callToStart) {
       callToStart = window.TogetherJSConfig.callToStart;
     }
@@ -906,7 +777,7 @@
           TogetherJS();
         }
       } else if (window.TogetherJSConfig_autoStart ||
-                 (window.TogetherJSConfig && window.TogetherJSConfig.autoStart)) {
+        (window.TogetherJSConfig && window.TogetherJSConfig.autoStart)) {
         TogetherJS.startup.reason = "joined";
         TogetherJS();
       }
@@ -914,11 +785,6 @@
   }
 
   conditionalActivate();
-
-  // FIXME: wait until load event to double check if this gets set?
-  if (window.TogetherJSConfig_enableShortcut) {
-    TogetherJS.listenForShortcut();
-  }
 
   // For compatibility:
   window.TowTruck = TogetherJS;

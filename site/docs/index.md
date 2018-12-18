@@ -104,9 +104,6 @@ The other way to set a variable *after* TogetherJS is loaded is `TogetherJS.conf
 `TogetherJSConfig_cloneClicks`:
     This should be set to a jQuery selector or set to true. Whenever someone clicks on an element matching this selector, that click will be repeated (as an actual click) on everyone else's browser.  This is useful for cases when a click typically doesn't *do* anything, but shows or hides or switches the view of the page.  Note that any control that toggles will definitely not work here!  If you have tab buttons that show different things you might use `TogetherJSConfig_cloneClicks = ".tab"`. Setting `TogetherJSConfig_cloneClicks = true` will globally clone clicks.
 
-`TogetherJSConfig_enableShortcut`:
-    If you want to try TogetherJS out on an application, but don't want to put up a "Start TogetherJS" button, you can use `TogetherJSConfig_enableShortcut = true` and then an event handler will be put into place that will start TogetherJS when you hit **alt-T alt-T** (twice in a row!).  TogetherJS will still automatically start when someone opens an invitation link.
-
 `TogetherJSConfig_useMinimizedCode`:
     Typically if you use `togetherjs.js` you'll get the unminimized and uncombined code, with each module loaded lazily.  If you use `togetherjs-min.js` you get the combined code.  But if you want to override that more dynamically, you can use this setting.
 

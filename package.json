@@ -46,7 +46,9 @@
     "npm": "^2.11.3"
   },
   "scripts": {
-    "start": "node hub/server.js",
+    "build": "grunt build buildsite --no-hardlink",
+    "dev": "grunt devwatch",
+    "server": "nodemon --inspect hub/server.js",
     "test": "grunt test"
   }
 }
