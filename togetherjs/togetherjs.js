@@ -340,22 +340,20 @@
     };
     proto.emit = function emit(name) {
       var offs = this._listenerOffs = [];
-      if ((!this._listeners) || !this._listeners[name]) {
+      if (!this._listeners || !this._listeners[name]) // 没有注册事件,直接返回
         return;
-      }
       var args = Array.prototype.slice.call(arguments, 1);
-      var l = this._listeners[name];
-      l.forEach(function (callback) {
-
+      this._listeners[name].forEach(function (callback) {
         callback.apply(this, args);
       }, this);
+
       delete this._listenerOffs;
+      // TODO: offs=this._listenerOffs,既然this._listenerOffs已经被delete,那下面还会执行?
       if (offs.length) {
         offs.forEach(function (item) {
           this.off(item[0], item[1]);
         }, this);
       }
-
     };
     return proto;
   };
@@ -372,7 +370,7 @@
   };
   /******** tool end ********/
 
-    // This should contain the output of "git describe --always --dirty"
+  // This should contain the output of "git describe --always --dirty"
   // FIXME: substitute this on the server (and update make-static-client)
   TogetherJS.version = version;
   TogetherJS.baseUrl = baseUrl;
@@ -503,7 +501,7 @@
     }
   };
 
-  TogetherJS.refreshUserData = function () { // 刷新用户数据
+  TogetherJS.refreshUserData = function () { // 刷新用户数据,emit
     if (TogetherJS.running && typeof TogetherJS.require == "function") {
       TogetherJS.require(["session"], function (session) {
         session.emit("refresh-user-data");
@@ -513,58 +511,29 @@
 
   TogetherJS._onmessage = function (msg) { // 处理接收到的socket信息
     var type = msg.type;
-    if (type.search(/^app\./) === 0) {
+    if (type.search(/^app\./) === 0) //hub 事件
       type = type.substr("app.".length);
-    } else {
+    else // system事件
       type = "togetherjs." + type;
-    }
     msg.type = type;
-    TogetherJS.hub.emit(msg.type, msg);
+    TogetherJS.hub.emit(msg.type, msg); //通过hub.emit触发事件
   };
 
-  TogetherJS.send = function (msg) {
-    if (!TogetherJS.require) {
+  TogetherJS.send = function (msg) { // 发送socket事件
+    if (!TogetherJS.require)
       throw "You cannot use TogetherJS.send() when TogetherJS is not running";
-    }
-    var session = TogetherJS.require("session");
-    session.appSend(msg);
+    TogetherJS.require(["session"], function (session) {
+      session.appSend(msg);
+    });
   };
 
   TogetherJS.shareUrl = function () {
-    if (!TogetherJS.require) {
+    if (!TogetherJS.require) 
       return null;
-    }
     var session = TogetherJS.require("session");
     return session.shareUrl();
   };
 
-  var listener = null;
-
-  TogetherJS.listenForShortcut = function () {
-    console.warn("Listening for alt-T alt-T to start TogetherJS");
-    TogetherJS.removeShortcut();
-    listener = function listener(event) {
-      if (event.which == 84 && event.altKey) {
-        if (listener.pressed) {
-          // Second hit
-          TogetherJS();
-        } else {
-          listener.pressed = true;
-        }
-      } else {
-        listener.pressed = false;
-      }
-    };
-    TogetherJS.once("ready", TogetherJS.removeShortcut);
-    document.addEventListener("keyup", listener, false);
-  };
-
-  TogetherJS.removeShortcut = function () {
-    if (listener) {
-      document.addEventListener("keyup", listener, false);
-      listener = null;
-    }
-  };
   TogetherJS.checkForUsersOnChannel = function (address, callback) {
     if (address.search(/^https?:/i) === 0) {
       address = address.replace(/^http/i, 'ws');
