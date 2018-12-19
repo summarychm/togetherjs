@@ -120,10 +120,9 @@
     var session;
     if (TogetherJS.running) {
       session = TogetherJS.require("session");
-      session.close();
-      return;
+      return session.close();
     }
-    TogetherJS.startup.button = null; // 触发DOM
+    TogetherJS.startup.button = null; // 确定启动together的DOM
     try {
       if (event && typeof event == "object") {
         if (event.target && typeof event)
@@ -408,12 +407,12 @@
   };
   TogetherJS.startup = TogetherJS._extend(TogetherJS._startupInit); //初始化配置元素
   TogetherJS._mixinEvents(TogetherJS); // 绑定eventListener
-  TogetherJS.hub = TogetherJS._mixinEvents({}); // 给hub绑定 eventListener
+  TogetherJS.hub = TogetherJS._mixinEvents({}); // 给hub绑定eventListener
 
   // 修改配置的3种方式
   // *  TogetherJS.config(configurationObject)
   // *  TogetherJS.config(configName, value)
-  // *  window.TogetherJSConfig 在togetherJS启动前
+  // *  window.TogetherJSConfig在togetherJS启动前
   TogetherJS.config = function (name, val) { // 设置config,支持字符和对象2种形式
     var settings, i, tracker, attr;
     if (arguments.length == 1) {
@@ -436,19 +435,19 @@
       var value = settings[attr];
       TogetherJS._configuration[attr] = value; // 设置值
 
-      /******** track previous begin ********/
+
+      /******** track 发布 begin ********/
       var trackers = TogetherJS._configTrackers[name] || [];
       var failed = false; //是否报错
-      for (i = 0; i < trackers.length; i++) {
+      trackers.forEach(tracker => {
         try {
-          tracker = trackers[i];
           tracker(value, previous);
         } catch (e) {
           console.warn("Error setting configuration", name, "to", value, ":", e, "; reverting to", previous);
           failed = true;
           break;
         }
-      }
+      });
       if (failed) {
         TogetherJS._configuration[attr] = previous;
         for (i = 0; i < trackers.length; i++) {
@@ -474,7 +473,7 @@
     return value;
   };
 
-  TogetherJS.config.track = function (name, callback) { // 追踪?
+  TogetherJS.config.track = function (name, callback) { // track,用于订阅config变化的函数
     if (!TogetherJS._defaultConfiguration.hasOwnProperty(name))
       throw new Error("Configuration is unknown: " + name);
     callback(TogetherJS.config.get(name));
@@ -528,12 +527,12 @@
   };
 
   TogetherJS.shareUrl = function () {
-    if (!TogetherJS.require) 
-      return null;
+    if (!TogetherJS.require) return null;
     var session = TogetherJS.require("session");
     return session.shareUrl();
   };
 
+  // 没有用到的方法
   TogetherJS.checkForUsersOnChannel = function (address, callback) {
     if (address.search(/^https?:/i) === 0) {
       address = address.replace(/^http/i, 'ws');
@@ -564,68 +563,53 @@
     };
   };
 
-  // It's nice to replace this early, before the load event fires, so we conflict
-  // as little as possible with the app we are embedded in:
   var hash = location.hash.replace(/^#/, "");
-  var m = /&?togetherjs=([^&]*)/.exec(hash);
-  if (m) {
-    TogetherJS.startup._joinShareId = m[1];
+  var room = /&?togetherjs=([^&]*)/.exec(hash); //room
+  if (room) { // 加入到room
+    TogetherJS.startup._joinShareId = room[1];
     TogetherJS.startup.reason = "joined";
-    var newHash = hash.substr(0, m.index) + hash.substr(m.index + m[0].length);
-    location.hash = newHash;
+    var newHash = hash.substr(0, room.index) + hash.substr(room.index + room[0].length);
+    location.hash = newHash; // 更新为去除掉room后的hash
   }
   if (window._TogetherJSShareId) {
-    // A weird hack for something the addon does, to force a shareId.
-    // FIXME: probably should remove, it's a wonky feature.
     TogetherJS.startup._joinShareId = window._TogetherJSShareId;
     delete window._TogetherJSShareId;
   }
 
-  function conditionalActivate() {
-    if (window.TogetherJSConfig_noAutoStart) {
-      return;
-    }
-    // A page can define this function to defer TogetherJS from starting
+  function conditionalActivate() { // 页面加载(支持自动/延时加载,TogetherJSConfig_callToStart)
+    if (window.TogetherJSConfig_noAutoStart) return;
     var callToStart = window.TogetherJSConfig_callToStart;
-    if (window.TogetherJSConfig && window.TogetherJSConfig.callToStart) {
+    if (window.TogetherJSConfig && window.TogetherJSConfig.callToStart)
       callToStart = window.TogetherJSConfig.callToStart;
-    }
-    if (callToStart) {
-      // FIXME: need to document this:
+    if (callToStart) // 将初始化方法传入回调事件中
       callToStart(onload);
-    } else {
+    else
       onload();
-    }
   }
-
-  // FIXME: can we push this up before the load event?
-  // Do we need to wait at all?
   function onload() {
-    if (TogetherJS.startup._joinShareId) {
+    if (TogetherJS.startup._joinShareId) // 方式1: joined room
       TogetherJS();
-    } else if (window._TogetherJSBookmarklet) {
+     else if (window._TogetherJSBookmarklet) { //方式2: 书签功能载入(基本不用)
       delete window._TogetherJSBookmarklet;
       TogetherJS();
     } else {
-      // FIXME: this doesn't respect storagePrefix:
       var key = "togetherjs-session.status";
       var value = sessionStorage.getItem(key);
       if (value) {
         value = JSON.parse(value);
-        if (value && value.running) {
+        if (value && value.running) { //方式3: sessionStorage 如果running,则continue
           TogetherJS.startup.continued = true;
           TogetherJS.startup.reason = value.startupReason;
           TogetherJS();
         }
       } else if (window.TogetherJSConfig_autoStart ||
         (window.TogetherJSConfig && window.TogetherJSConfig.autoStart)) {
-        TogetherJS.startup.reason = "joined";
+        TogetherJS.startup.reason = "joined"; //方式4: 自动启动
         TogetherJS();
       }
     }
   }
-
-  conditionalActivate();
+  conditionalActivate(); // 页面加载
 
   function addStyle() {
     var existing = document.getElementById("togetherjs-stylesheet");
@@ -645,7 +629,4 @@
       (cacheBust ? ("?bust=" + cacheBust) : '');
     document.head.appendChild(script);
   }
-  // For compatibility:
-  window.TowTruck = TogetherJS;
-
 })();
