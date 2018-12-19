@@ -8,7 +8,7 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
 
   // This is the amount of time in which a hello-back must be received after a hello
   // for us to respect a URL change:
-  var HELLO_BACK_CUTOFF = 1500;
+  var HELLO_BACK_CUTOFF = 1500; 
 
   var session = util.mixinEvents(util.Module("session"));
   var assert = util.assert;
