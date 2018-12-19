@@ -63,6 +63,7 @@ module.exports = function (grunt) {
     filename = filename.replace(/\.js$/, "");
     libs.push(filename);
   });
+  
   var langs = [];
   grunt.file.expand("togetherjs/locale/*.json").forEach(function (langFilename) {
     var lang = path.basename(langFilename).replace(/\.json/, "");

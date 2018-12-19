@@ -7,6 +7,7 @@ TogetherJS - Surprisingly easy collaboration
 >   * 如何实现数据传输,转发.
 >   * 如何实现浏览器事件复现,
 >   * 如何实现及维护peer列表.
+> * 删除无用的code,比如YouTube/GoogleAnalytic
 > * 
 
 

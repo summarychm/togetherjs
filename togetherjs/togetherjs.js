@@ -6,24 +6,11 @@
 // min模式,将所有code 都压缩的一个js文件中
 (function () {
 
-  function addStyle() {
-    var existing = document.getElementById("togetherjs-stylesheet");
-    if (!existing) {
-      var link = document.createElement("link");
-      link.id = "togetherjs-stylesheet";
-      link.setAttribute("rel", "stylesheet");
-      link.href = baseUrl + styleSheet +
-        (cacheBust ? ("?bust=" + cacheBust) : '');
-      document.head.appendChild(link);
-    }
-  }
-
-  function addScript(url) {
-    var script = document.createElement("script");
-    script.src = baseUrl + url +
-      (cacheBust ? ("?bust=" + cacheBust) : '');
-    document.head.appendChild(script);
-  }
+  var styleSheet = "/togetherjs/togetherjs.css";
+  // True if this file should use minimized sub-resources:
+  var min = false;
+  var version = "unknown";
+  var cacheBust = Date.now() + "";
 
   var defaultConfiguration = {
     // Enable Mozilla or Google analytics on the page when TogetherJS is activated:
@@ -62,15 +49,11 @@
     disableWebRTC: false, // 禁用音视频
     ignoreMessages: ["cursor-update", "keydown", "scroll-update"], //控制台要屏蔽的事件类型
     ignoreForms: [":password"], //要忽略的表单元素
-    lang: undefined, //默认语言
+    lang: "en-US", //默认语言
     fallbackLang: "en-US" // 备用语言
   };
 
-  var styleSheet = "/togetherjs/togetherjs.css";
-  // True if this file should use minimized sub-resources:
-  var min = false;
-  var version = "unknown";
-  var cacheBust = Date.now() + "";
+
 
   var configOverride = localStorage.getItem("togetherjs.configOverride");
   if (configOverride) {
@@ -91,7 +74,7 @@
     }
   }
 
-  /******** 尝试从全局配置,local中读取baseUrl begin ********/
+  /******** 尝试从配置/localStorage中 读取baseUrl begin ********/
   var baseUrl = "__baseUrl__";
   if (window.TogetherJSConfig && window.TogetherJSConfig.baseUrl)
     baseUrl = window.TogetherJSConfig.baseUrl;
@@ -110,7 +93,6 @@
     else
       baseUrl = baseUrlOverride.baseUrl;
   }
-
   if (!baseUrl) {
     var scripts = document.getElementsByTagName("script");
     for (var i = 0; i < scripts.length; i++) {
@@ -129,9 +111,11 @@
   if (!baseUrl) {
     console.warn("Could not determine TogetherJS's baseUrl (looked for a <script> with togetherjs.js and togetherjs-min.js)");
   }
+  var defaultHubBase = "https://hub.togetherjs.mozillalabs.com";
+  defaultConfiguration.hubBase = defaultHubBase;
   /******** baseUrl end ********/
 
-  // TogetherJ主体类
+  /******** TogetherJ主体类 begin ********/
   window.TogetherJS = function TogetherJS(event) {
     var session;
     if (TogetherJS.running) {
@@ -159,9 +143,10 @@
     }
 
 
+    /******** on 和 hub_on事件绑定 begin ********/
     var attr;
     var attrName;
-    var globalOns = {}; // 存放回调事件集合
+    var globalOns = {}; // 存放systemEvent集合
     for (attr in window) {
       if (attr.indexOf("TogetherJSConfig_on_") === 0) { //先检测事件
         attrName = attr.substr(("TogetherJSConfig_on_").length);
@@ -171,25 +156,27 @@
         TogetherJS.config(attrName, window[attr]);
       }
     }
-    var ons = TogetherJS.config.get("on");
+    var ons = TogetherJS.config.get("on"); //更新config中的 onEvent
     for (attr in globalOns)
       ons[attr] = globalOns[attr];
     TogetherJS.config("on", ons); //更新配置
     for (attr in ons)
       TogetherJS.on(attr, ons[attr]); //绑定事件
 
-    var hubOns = TogetherJS.config.get("hub_on");
+    var hubOns = TogetherJS.config.get("hub_on"); //更新config中的 hubOn
     if (hubOns) {
       for (attr in hubOns) {
         if (hubOns.hasOwnProperty(attr))
           TogetherJS.hub.on(attr, hubOns[attr]);
       }
     }
-    if (!TogetherJS.config.close('cacheBust')) {
+    /******** on 和 hub_on事件绑定 end ********/
+
+    if (!TogetherJS.config.close('cacheBust')) { // 判断hash
       cacheBust = '';
       delete TogetherJS.requireConfig.urlArgs;
     }
-    if (!TogetherJS.startup.reason)
+    if (!TogetherJS.startup.reason) // 设置启动类型
       TogetherJS.startup.reason = "started";
     if (TogetherJS._loaded) { //_loaded属性为真(延迟执行)就直接启动,并停止继续执行
       session = TogetherJS.require("session");
@@ -227,6 +214,7 @@
     TogetherJS.config("lang", lang);
     var localeTemplates = "templates-" + lang;
     deps.splice(0, 0, localeTemplates);
+
     function callback(session, jquery) {
       TogetherJS._loaded = true;
       if (!min) {
@@ -261,10 +249,10 @@
       addScript("/togetherjs/libs/require.js");
     }
   };
+  /******** TogetherJ主体类 end ********/
 
-  TogetherJS.pageLoaded = Date.now();
-
-  TogetherJS._extend = function (base, extensions) {
+  /******** tool begin ********/
+  TogetherJS._extend = function (base, extensions) { // 给对象扩展属性/方法
     if (!extensions) {
       extensions = base;
       base = {};
@@ -276,44 +264,7 @@
     }
     return base;
   };
-
-  TogetherJS._startupInit = {
-    // What element, if any, was used to start the session:
-    button: null,
-    // The startReason is the reason TogetherJS was started.  One of:
-    //   null: not started
-    //   started: hit the start button (first page view)
-    //   joined: joined the session (first page view)
-    reason: null,
-    // Also, the session may have started on "this" page, or maybe is continued
-    // from a past page.  TogetherJS.continued indicates the difference (false the
-    // first time TogetherJS is started or joined, true on later page loads).
-    continued: false,
-    // This is set to tell the session what shareId to use, if the boot
-    // code knows (mostly because the URL indicates the id).
-    _joinShareId: null,
-    // This tells session to start up immediately (otherwise it would wait
-    // for session.start() to be run)
-    _launch: false
-  };
-  TogetherJS.startup = TogetherJS._extend(TogetherJS._startupInit);
-  TogetherJS.running = false;
-
-  TogetherJS.requireConfig = {
-    context: "togetherjs",
-    baseUrl: baseUrl + "/togetherjs",
-    urlArgs: "bust=" + cacheBust,
-    paths: {
-      jquery: "libs/jquery-1.11.1.min",
-      walkabout: "libs/walkabout/walkabout",
-      esprima: "libs/walkabout/lib/esprima",
-      falafel: "libs/walkabout/lib/falafel",
-      tinycolor: "libs/tinycolor",
-      whrandom: "libs/whrandom/random"
-    }
-  };
-
-  TogetherJS._mixinEvents = function (proto) {
+  TogetherJS._mixinEvents = function (proto) { //给对象添加EventListener
     proto.on = function on(name, callback) {
       if (typeof callback != "function") {
         console.warn("Bad callback for", this, ".once(", name, ", ", callback, ")");
@@ -408,163 +359,94 @@
     };
     return proto;
   };
-
-  /* This finalizes the unloading of TogetherJS, including unloading modules */
-  TogetherJS._teardown = function () {
+  TogetherJS._teardown = function () { // 卸载模块的方法
     var requireObject = TogetherJS._requireObject || window.require;
     // FIXME: this doesn't clear the context for min-case
     if (requireObject.s && requireObject.s.contexts) {
       delete requireObject.s.contexts.togetherjs;
     }
+    // 初始化配置
     TogetherJS._loaded = false;
     TogetherJS.startup = TogetherJS._extend(TogetherJS._startupInit);
     TogetherJS.running = false;
   };
+  /******** tool end ********/
 
-  TogetherJS._mixinEvents(TogetherJS);
-  TogetherJS._knownEvents = ["ready", "close"];
+    // This should contain the output of "git describe --always --dirty"
+  // FIXME: substitute this on the server (and update make-static-client)
+  TogetherJS.version = version;
+  TogetherJS.baseUrl = baseUrl;
+  TogetherJS.running = false; // 当前运行状态
+  TogetherJS.pageLoaded = Date.now(); //记载page加载时间
+  TogetherJS._knownEvents = ["ready", "close"]; //systemEvent所支持的事件
   TogetherJS.toString = function () {
     return "TogetherJS";
   };
 
-  var defaultHubBase = "__hubUrl__";
-  if (defaultHubBase == "__" + "hubUrl" + "__") {
-    // Substitution wasn't made
-    defaultHubBase = "https://hub.togetherjs.mozillalabs.com";
-  }
-  defaultConfiguration.hubBase = defaultHubBase;
+  TogetherJS._configuration = {}; // 所有的配置项
+  TogetherJS._configTrackers = {}; // 属性track集合 {key:ary}
+  TogetherJS._configClosed = {}; // 冻结的配置项
+  TogetherJS._defaultConfiguration = defaultConfiguration; // 内部配置项
 
-  TogetherJS._configuration = {};
-  TogetherJS._defaultConfiguration = {
-    // Disables clicks for a certain element.
-    // (e.g., 'canvas' would not show clicks on canvas elements.)
-    // Setting this to true will disable clicks globally.
-    dontShowClicks: false,
-    // Experimental feature to echo clicks to certain elements across clients:
-    cloneClicks: false,
-    // Enable Mozilla or Google analytics on the page when TogetherJS is activated:
-    // FIXME: these don't seem to be working, and probably should be removed in favor
-    // of the hub analytics
-    enableAnalytics: false,
-    // The code to enable (this is defaulting to a Mozilla code):
-    analyticsCode: "UA-35433268-28",
-    // The base URL of the hub
-    hubBase: defaultHubBase,
-    // A function that will return the name of the user:
-    getUserName: null,
-    // A function that will return the color of the user:
-    getUserColor: null,
-    // A function that will return the avatar of the user:
-    getUserAvatar: null,
-    // The siteName is used in the walkthrough (defaults to document.title):
-    siteName: null,
-    // Whether to use the minimized version of the code (overriding the built setting)
-    useMinimizedCode: undefined,
-    // Any events to bind to
-    on: {},
-    // Hub events to bind to
-    hub_on: {},
-    // Enables the alt-T alt-T TogetherJS shortcut; however, this setting
-    // The name of this tool as provided to users.  The UI is updated to use this.
-    // Because of how it is used in text it should be a proper noun, e.g.,
-    // "MySite's Collaboration Tool"
-    toolName: null,
-    // Used to auto-start TogetherJS with a {prefix: pageName, max: participants}
-    // Also with findRoom: "roomName" it will connect to the given room name
-    findRoom: null,
-    // If true, starts TogetherJS automatically (of course!)
-    autoStart: false,
-    // If true, then the "Join TogetherJS Session?" confirmation dialog
-    // won't come up
-    suppressJoinConfirmation: false,
-    // If true, then the "Invite a friend" window won't automatically come up
-    suppressInvite: false,
-    // A room in which to find people to invite to this session,
-    inviteFromRoom: null,
-    // This is used to keep sessions from crossing over on the same
-    // domain, if for some reason you want sessions that are limited
-    // to only a portion of the domain:
-    storagePrefix: "togetherjs",
-    // When true, we treat the entire URL, including the hash, as the identifier
-    // of the page; i.e., if you one person is on `http://example.com/#view1`
-    // and another person is at `http://example.com/#view2` then these two people
-    // are considered to be at completely different URLs
-    includeHashInUrl: false,
-    // The language to present the tool in, such as "en-US" or "ru-RU"
-    // Note this must be set as TogetherJSConfig_lang, as it effects the loader
-    // and must be set as soon as this file is included
-    lang: null
-  };
-  // FIXME: there's a point at which configuration can't be updated
-  // (e.g., hubBase after the TogetherJS has loaded).  We should keep
-  // track of these and signal an error if someone attempts to
-  // reconfigure too late
-
-  TogetherJS.getConfig = function (name) { // rename into TogetherJS.config.get()?
-    var value = TogetherJS._configuration[name];
-    if (value === undefined) {
-      if (!TogetherJS._defaultConfiguration.hasOwnProperty(name)) {
-        console.error("Tried to load unknown configuration value:", name);
-      }
-      value = TogetherJS._defaultConfiguration[name];
+  TogetherJS.requireConfig = {
+    context: "togetherjs",
+    baseUrl: baseUrl + "/togetherjs",
+    urlArgs: "bust=" + cacheBust,
+    paths: {
+      jquery: "libs/jquery-1.11.1.min",
+      walkabout: "libs/walkabout/walkabout",
+      esprima: "libs/walkabout/lib/esprima",
+      falafel: "libs/walkabout/lib/falafel",
+      tinycolor: "libs/tinycolor",
+      whrandom: "libs/whrandom/random"
     }
-    return value;
   };
-  TogetherJS._defaultConfiguration = defaultConfiguration;
-  TogetherJS._configTrackers = {};
-  TogetherJS._configClosed = {};
+  TogetherJS._startupInit = { //每部启动会话元素的初始化配置
+    button: null, // 启动会话的元素
+    reason: null, // 链接方式(started全新会话,joined继续会话)
+    continued: false, //页面加载后,Together已经运行.
+    _joinShareId: null, //要加入的房间
+    _launch: false //true立即启动,false通过session.start()启动
+  };
+  TogetherJS.startup = TogetherJS._extend(TogetherJS._startupInit); //初始化配置元素
+  TogetherJS._mixinEvents(TogetherJS); // 绑定eventListener
+  TogetherJS.hub = TogetherJS._mixinEvents({}); // 给hub绑定 eventListener
 
-  /* TogetherJS.config(configurationObject)
-     or: TogetherJS.config(configName, value)
-
-     Adds configuration to TogetherJS.  You may also set the global variable TogetherJSConfig
-     and when TogetherJS is started that configuration will be loaded.
-
-     Unknown configuration values will lead to console error messages.
-     */
-  TogetherJS.config = function (name, maybeValue) {
-    var settings;
+  // 修改配置的3种方式
+  // *  TogetherJS.config(configurationObject)
+  // *  TogetherJS.config(configName, value)
+  // *  window.TogetherJSConfig 在togetherJS启动前
+  TogetherJS.config = function (name, val) { // 设置config,支持字符和对象2种形式
+    var settings, i, tracker, attr;
     if (arguments.length == 1) {
-      if (typeof name != "object") {
+      if (typeof name != "object")
         throw new Error('TogetherJS.config(value) must have an object value (not: ' + name + ')');
-      }
-      settings = name;
+      settings = name; //对象形式
     } else {
       settings = {};
-      settings[name] = maybeValue;
+      settings[name] = val;
     }
-    var i;
-    var tracker;
-    var attr;
-    for (attr in settings) {
-      if (settings.hasOwnProperty(attr)) {
-        if (TogetherJS._configClosed[attr] && TogetherJS.running) {
-          throw new Error("The configuration " + attr + " is finalized and cannot be changed");
-        }
-      }
-    }
-    for (attr in settings) {
-      if (!settings.hasOwnProperty(attr)) {
+    for (attr in settings) { // 进行赋值
+      if (TogetherJS._configClosed[attr] && TogetherJS.running) //被冻结的属性
+        throw new Error("The configuration " + attr + " is finalized and cannot be changed");
+      if (attr == "loaded" || attr == "callToStart") //不支持修改loaded/callToStart两属性
         continue;
-      }
-      if (attr == "loaded" || attr == "callToStart") {
-        continue;
-      }
-      if (!TogetherJS._defaultConfiguration.hasOwnProperty(attr)) {
+      if (!TogetherJS._defaultConfiguration.hasOwnProperty(attr)) //不认识的属性
         console.warn("Unknown configuration value passed to TogetherJS.config():", attr);
-      }
+
       var previous = TogetherJS._configuration[attr];
       var value = settings[attr];
-      TogetherJS._configuration[attr] = value;
+      TogetherJS._configuration[attr] = value; // 设置值
+
+      /******** track previous begin ********/
       var trackers = TogetherJS._configTrackers[name] || [];
-      var failed = false;
+      var failed = false; //是否报错
       for (i = 0; i < trackers.length; i++) {
         try {
           tracker = trackers[i];
           tracker(value, previous);
         } catch (e) {
-          console.warn("Error setting configuration", name, "to", value,
-            ":", e, "; reverting to", previous);
+          console.warn("Error setting configuration", name, "to", value, ":", e, "; reverting to", previous);
           failed = true;
           break;
         }
@@ -581,33 +463,30 @@
           }
         }
       }
+      /******** track previous end ********/
     }
   };
-
-  TogetherJS.config.get = function (name) {
+  TogetherJS.config.get = TogetherJS.getConfig = function (name) { //获取配置信息
     var value = TogetherJS._configuration[name];
     if (value === undefined) {
-      if (!TogetherJS._defaultConfiguration.hasOwnProperty(name)) {
+      if (!TogetherJS._defaultConfiguration.hasOwnProperty(name))
         console.error("Tried to load unknown configuration value:", name);
-      }
       value = TogetherJS._defaultConfiguration[name];
     }
     return value;
   };
 
-  TogetherJS.config.track = function (name, callback) {
-    if (!TogetherJS._defaultConfiguration.hasOwnProperty(name)) {
+  TogetherJS.config.track = function (name, callback) { // 追踪?
+    if (!TogetherJS._defaultConfiguration.hasOwnProperty(name))
       throw new Error("Configuration is unknown: " + name);
-    }
     callback(TogetherJS.config.get(name));
-    if (!TogetherJS._configTrackers[name]) {
+    if (!TogetherJS._configTrackers[name])
       TogetherJS._configTrackers[name] = [];
-    }
     TogetherJS._configTrackers[name].push(callback);
     return callback;
   };
 
-  TogetherJS.config.close = function (name) {
+  TogetherJS.config.close = function (name) { //冻结并返回指定值
     if (!TogetherJS._defaultConfiguration.hasOwnProperty(name)) {
       throw new Error("Configuration is unknown: " + name);
     }
@@ -615,16 +494,16 @@
     return this.get(name);
   };
 
-  TogetherJS.reinitialize = function () {
+  TogetherJS.reinitialize = function () { //重新启动
+    // 如果未设置,说明TogetherJS has been not loaded,不需要重新加载
     if (TogetherJS.running && typeof TogetherJS.require == "function") {
       TogetherJS.require(["session"], function (session) {
         session.emit("reinitialize");
       });
     }
-    // If it's not set, TogetherJS has not been loaded, and reinitialization is not needed
   };
 
-  TogetherJS.refreshUserData = function () {
+  TogetherJS.refreshUserData = function () { // 刷新用户数据
     if (TogetherJS.running && typeof TogetherJS.require == "function") {
       TogetherJS.require(["session"], function (session) {
         session.emit("refresh-user-data");
@@ -632,14 +511,7 @@
     }
   };
 
-  // This should contain the output of "git describe --always --dirty"
-  // FIXME: substitute this on the server (and update make-static-client)
-  TogetherJS.version = version;
-  TogetherJS.baseUrl = baseUrl;
-
-  TogetherJS.hub = TogetherJS._mixinEvents({});
-
-  TogetherJS._onmessage = function (msg) {
+  TogetherJS._onmessage = function (msg) { // 处理接收到的socket信息
     var type = msg.type;
     if (type.search(/^app\./) === 0) {
       type = type.substr("app.".length);
@@ -786,6 +658,24 @@
 
   conditionalActivate();
 
+  function addStyle() {
+    var existing = document.getElementById("togetherjs-stylesheet");
+    if (!existing) {
+      var link = document.createElement("link");
+      link.id = "togetherjs-stylesheet";
+      link.setAttribute("rel", "stylesheet");
+      link.href = baseUrl + styleSheet +
+        (cacheBust ? ("?bust=" + cacheBust) : '');
+      document.head.appendChild(link);
+    }
+  }
+
+  function addScript(url) {
+    var script = document.createElement("script");
+    script.src = baseUrl + url +
+      (cacheBust ? ("?bust=" + cacheBust) : '');
+    document.head.appendChild(script);
+  }
   // For compatibility:
   window.TowTruck = TogetherJS;
 
