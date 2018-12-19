@@ -53,8 +53,6 @@
     fallbackLang: "en-US" // 备用语言
   };
 
-
-
   var configOverride = localStorage.getItem("togetherjs.configOverride");
   if (configOverride) {
     try {
@@ -122,7 +120,8 @@
       session = TogetherJS.require("session");
       return session.close();
     }
-    TogetherJS.startup.button = null; // 确定启动together的DOM
+    /******** 确定启动together的DOM begin ********/
+    TogetherJS.startup.button = null;
     try {
       if (event && typeof event == "object") {
         if (event.target && typeof event)
@@ -135,12 +134,12 @@
     } catch (e) {
       console.warn("Error determining starting button:", e);
     }
+    //******** 确定启动together的DOM end ********/
 
     if (window.TogetherJSConfig && (!window.TogetherJSConfig.loaded)) {
-      TogetherJS.config(window.TogetherJSConfig);
+      TogetherJS.config(window.TogetherJSConfig); // 读取并应用配置文件
       window.TogetherJSConfig.loaded = true;
     }
-
 
     /******** on 和 hub_on事件绑定 begin ********/
     var attr;
@@ -177,19 +176,20 @@
     }
     if (!TogetherJS.startup.reason) // 设置启动类型
       TogetherJS.startup.reason = "started";
+    /*****************************************************************************************/
     if (TogetherJS._loaded) { //_loaded属性为真(延迟执行)就直接启动,并停止继续执行
       session = TogetherJS.require("session");
       addStyle();
       return session.start();
     }
+    /*****************************************************************************************/
     // A sort of signal to session.js to tell it to actually start itself (i.e., put up a UI and try to activate)
-    TogetherJS.startup._launch = true;
+    TogetherJS.startup._launch = true;// 标识TogetherJS已经启动
     addStyle();
     var minSetting = TogetherJS.config.get("useMinimizedCode");
     TogetherJS.config.close("useMinimizedCode");
     if (minSetting !== undefined)
       min = !!minSetting;
-
     var requireConfig = TogetherJS._extend(TogetherJS.requireConfig);
     var deps = ["session", "jquery"];
     var lang = TogetherJS.getConfig("lang");
@@ -211,18 +211,10 @@
     if (!availableTranslations[lang])
       lang = availableTranslations["en-US"];
     TogetherJS.config("lang", lang);
-    var localeTemplates = "templates-" + lang;
-    deps.splice(0, 0, localeTemplates);
 
-    function callback(session, jquery) {
-      TogetherJS._loaded = true;
-      if (!min) {
-        TogetherJS.require = require.config({
-          context: "togetherjs"
-        });
-        TogetherJS._requireObject = require;
-      }
-    }
+    var localeTemplates = "templates-" + lang;
+    deps.splice(0, 0, localeTemplates); //加入模板文件
+
     if (!min) {
       if (typeof require == "function") {
         if (!require.config) {
@@ -232,21 +224,28 @@
         TogetherJS.require = require.config(requireConfig);
       }
     }
-    if (typeof TogetherJS.require == "function") {
-      // This is an already-configured version of require
-      TogetherJS.require(deps, callback);
-    } else {
-      requireConfig.deps = deps;
-      requireConfig.callback = callback;
+
+    function callback(session, jquery) {
+      TogetherJS._loaded = true;
       if (!min) {
-        window.require = requireConfig;
+        TogetherJS.require = require.config({ //包装require
+          context: "togetherjs"
+        });
+        TogetherJS._requireObject = require;
       }
     }
-    if (min) {
-      addScript("/togetherjs/togetherjsPackage.js");
-    } else {
-      addScript("/togetherjs/libs/require.js");
+    if (typeof TogetherJS.require == "function")
+      TogetherJS.require(deps, callback); //自定义的require
+    else {
+      requireConfig.deps = deps;
+      requireConfig.callback = callback;
+      if (!min)
+        window.require = requireConfig;
     }
+    if (min)
+      addScript("/togetherjs/togetherjsPackage.js");
+    else
+      addScript("/togetherjs/libs/require.js");
   };
   /******** TogetherJ主体类 end ********/
 
@@ -586,10 +585,11 @@
     else
       onload();
   }
+
   function onload() {
     if (TogetherJS.startup._joinShareId) // 方式1: joined room
       TogetherJS();
-     else if (window._TogetherJSBookmarklet) { //方式2: 书签功能载入(基本不用)
+    else if (window._TogetherJSBookmarklet) { //方式2: 书签功能载入(基本不用)
       delete window._TogetherJSBookmarklet;
       TogetherJS();
     } else {
