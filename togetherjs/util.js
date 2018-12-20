@@ -4,37 +4,28 @@
 
 define(["jquery", "jqueryPlugins"], function ($) {
   var util = {};
-
   util.Deferred = $.Deferred;
   TogetherJS.$ = $;
-
   /* A simple class pattern, use like:
-
     var Foo = util.Class({
       constructor: function (a, b) {
         init the class
       },
       otherMethod: ...
     });
-
   You can also give a superclass as the optional first argument.
-
   Instantiation does not require "new"
-
   */
-  util.Class = function (superClass, prototype) {
-    var a;
-    if (prototype === undefined) {
+  util.Class = function (superClass, prototype) { //class辅助类(超类,原型)
+    if (prototype === undefined)
       prototype = superClass;
-    } else {
-      if (superClass.prototype) {
+    else {
+      if (superClass.prototype)
         superClass = superClass.prototype;
-      }
-      var newPrototype = Object.create(superClass);
-      for (a in prototype) {
-        if (prototype.hasOwnProperty(a)) {
-          newPrototype[a] = prototype[a];
-        }
+      var newPrototype = Object.create(superClass); //使用es5的Object.create
+      for (let attr in prototype) {
+        if (prototype.hasOwnProperty(attr))
+          newPrototype[attr] = prototype[attr];
       }
       prototype = newPrototype;
     }
@@ -52,18 +43,15 @@ define(["jquery", "jqueryPlugins"], function ($) {
       };
     }
     if (prototype.classMethods) {
-      for (a in prototype.classMethods) {
-        if (prototype.classMethods.hasOwnProperty(a)) {
-          ClassObject[a] = prototype.classMethods[a];
-        }
+      for (let attr in prototype.classMethods) {
+        if (prototype.classMethods.hasOwnProperty(attr))
+          ClassObject[attr] = prototype.classMethods[attr];
       }
     }
     return ClassObject;
   };
-
   /* Extends obj with other, or copies obj if no other is given. */
   util.extend = TogetherJS._extend;
-
   util.forEachAttr = function (obj, callback, context) {
     context = context || obj;
     for (var a in obj) {
@@ -72,28 +60,24 @@ define(["jquery", "jqueryPlugins"], function ($) {
       }
     }
   };
-
   /* Trim whitespace from a string */
   util.trim = function trim(s) {
     return s.replace(/^\s+/, "").replace(/\s+$/, "");
   };
-
   /* Convert a string into something safe to use as an HTML class name */
   util.safeClassName = function safeClassName(name) {
     return name.replace(/[^a-zA-Z0-9_\-]/g, "_") || "class";
   };
-
   util.AssertionError = function (message) {
-    if (! this instanceof util.AssertionError) {
+    if (!this instanceof util.AssertionError) {
       return new util.AssertionError(message);
     }
     this.message = message;
     this.name = "AssertionError";
   };
   util.AssertionError.prototype = Error.prototype;
-
   util.assert = function (cond) {
-    if (! cond) {
+    if (!cond) {
       var args = ["Assertion error:"].concat(Array.prototype.slice.call(arguments, 1));
       console.error.apply(console, args);
       if (console.trace) {
@@ -102,25 +86,21 @@ define(["jquery", "jqueryPlugins"], function ($) {
       throw new util.AssertionError(args.join(" "));
     }
   };
-
   /* Generates a random ID */
   util.generateId = function (length) {
     length = length || 10;
     var letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV0123456789';
     var s = '';
-    for (var i=0; i<length; i++) {
+    for (var i = 0; i < length; i++) {
       s += letters.charAt(Math.floor(Math.random() * letters.length));
     }
     return s;
   };
-
   util.pickRandom = function (array) {
     return array[Math.floor(Math.random() * array.length)];
   };
-
   util.mixinEvents = TogetherJS._mixinEvents;
-
-  util.Module = util.Class({
+  util.Module = util.Class({ //Class辅助类,并设置name为session
     constructor: function (name) {
       this._name = name;
     },
@@ -128,22 +108,20 @@ define(["jquery", "jqueryPlugins"], function ($) {
       return '[Module ' + this._name + ']';
     }
   });
-
   util.blobToBase64 = function (blob) {
     // Oh this is just terrible
     var binary = '';
     var bytes = new Uint8Array(blob);
     var len = bytes.byteLength;
-    for (var i=0; i<len; i++) {
+    for (var i = 0; i < len; i++) {
       binary += String.fromCharCode(bytes[i]);
     }
     return btoa(binary);
   };
-
   util.truncateCommonDomain = function (url, base) {
     /* Remove the scheme and domain from url, if it matches the scheme and domain
        of base */
-    if (! base) {
+    if (!base) {
       return url;
     }
     var regex = /^https?:\/\/[^\/]*/i;
@@ -155,7 +133,6 @@ define(["jquery", "jqueryPlugins"], function ($) {
     }
     return url;
   };
-
   util.makeUrlAbsolute = function (url, base) {
     if (url.search(/^(http|https|ws|wss):/i) === 0) {
       // Absolute URL
@@ -176,7 +153,6 @@ define(["jquery", "jqueryPlugins"], function ($) {
     var lastBase = base.substr(0, last.index);
     return lastBase + url;
   };
-
   util.assertValidUrl = function (url) {
     /* This does some simple assertions that the url is valid:
        - it must be a string
@@ -185,11 +161,10 @@ define(["jquery", "jqueryPlugins"], function ($) {
     */
     util.assert(typeof url == "string", "URLs must be a string:", url);
     util.assert(url.search(/^(http:\/\/|https:\/\/|\/\/|data:)/i) === 0,
-                "URL must have an http, https, data, or // scheme:", url);
+      "URL must have an http, https, data, or // scheme:", url);
     util.assert(url.search(/[\)\'\"\ ]/) === -1,
-                "URLs cannot contain ), ', \", or spaces:", JSON.stringify(url));
+      "URLs cannot contain ), ', \", or spaces:", JSON.stringify(url));
   };
-
   util.resolver = function (deferred, func) {
     util.assert(deferred.then, "Bad deferred:", deferred);
     util.assert(typeof func == "function", "Not a function:", func);
@@ -216,14 +191,12 @@ define(["jquery", "jqueryPlugins"], function ($) {
       return result;
     };
   };
-
   /* Detects if a value is a promise.  Right now the presence of a
      `.then()` method is the best we can do.
   */
   util.isPromise = function (obj) {
     return typeof obj == "object" && obj.then;
   };
-
   /* Makes a value into a promise, by returning an already-resolved
      promise if a non-promise objectx is given.
   */
@@ -236,13 +209,10 @@ define(["jquery", "jqueryPlugins"], function ($) {
       });
     }
   };
-
   /* Resolves several promises (the promises are the arguments to the function)
      or the first argument may be an array of promises.
-
      Returns a promise that will resolve with the results of all the
      promises.  If any promise fails then the returned promise fails.
-
      FIXME: if a promise has more than one return value (like with
      promise.resolve(a, b)) then the latter arguments will be lost.
      */
@@ -257,7 +227,7 @@ define(["jquery", "jqueryPlugins"], function ($) {
     }
     return util.Deferred(function (def) {
       var count = args.length;
-      if (! count) {
+      if (!count) {
         def.resolve();
         return;
       }
@@ -276,7 +246,7 @@ define(["jquery", "jqueryPlugins"], function ($) {
         });
       });
       function check() {
-        if (! count) {
+        if (!count) {
           if (anyError) {
             if (oneArg) {
               def.reject(allResults);
@@ -294,7 +264,6 @@ define(["jquery", "jqueryPlugins"], function ($) {
       }
     });
   };
-
   util.readFileImage = function (el) {
     return util.Deferred(function (def) {
       var reader = new FileReader();
@@ -307,10 +276,9 @@ define(["jquery", "jqueryPlugins"], function ($) {
       reader.readAsArrayBuffer(el.files[0]);
     });
   };
-
-  util.matchElement = function(el, selector) {
+  util.matchElement = function (el, selector) {
     var res = selector;
-    if (selector === true || ! selector) {
+    if (selector === true || !selector) {
       return !!selector;
     }
     try {
@@ -319,9 +287,7 @@ define(["jquery", "jqueryPlugins"], function ($) {
       console.warn("Bad selector:", selector, "error:", e);
       return false;
     }
-
   };
-
   util.testExpose = function (objs) {
     if (typeof TogetherJSTestSpy == "undefined") {
       return;
@@ -330,6 +296,5 @@ define(["jquery", "jqueryPlugins"], function ($) {
       TogetherJSTestSpy[attr] = value;
     });
   };
-
   return util;
 });

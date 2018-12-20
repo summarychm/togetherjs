@@ -48,8 +48,10 @@
   },
   "scripts": {
     "build": "grunt build buildsite --no-hardlink",
-    "dev": "grunt devwatch",
+    "start": "cd build && hs -c 0 -p 3000 -o --cors",
+    "watch": "grunt watch",
     "server": "nodemon --inspect hub/server.js",
-    "test": "grunt test"
+    "test": "grunt test",
+    "dev": "grunt devwatch"
   }
 }

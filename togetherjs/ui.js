@@ -25,17 +25,15 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
   // If two chat messages come from the same person in this time
   // (milliseconds) then they are collapsed into one message:
   var COLLAPSE_MESSAGE_LIMIT = 5000;
-
   var COLORS = [
     "#8A2BE2", "#7FFF00", "#DC143C", "#00FFFF", "#8FBC8F", "#FF8C00", "#FF00FF",
-    "#FFD700", "#F08080", "#90EE90", "#FF6347"];
-
+    "#FFD700", "#F08080", "#90EE90", "#FF6347"
+  ];
   // This would be a circular import, but we just need the chat module sometime
   // after everything is loaded, and this is sure to complete by that time:
   require(["chat"], function (c) {
     chat = c;
   });
-
   /* Displays some toggleable element; toggleable elements have a
      data-toggles attribute that indicates what other elements should
      be hidden when this element is shown. */
@@ -47,7 +45,6 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
     other.hide();
     el.show();
   };
-
   function panelPosition() {
     var iface = $("#togetherjs-dock");
     if (iface.hasClass("togetherjs-dock-right")) {
@@ -60,18 +57,14 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       throw new AssertionError("#togetherjs-dock doesn't have positioning class");
     }
   }
-
   ui.container = null;
-
   // This is used for some signalling when ui.prepareUI and/or
   // ui.activateUI is called before the DOM is fully loaded:
   var deferringPrepareUI = null;
-
   function deferForContainer(func) {
     /* Defers any calls to func() until after ui.container is set
        Function cannot have a return value (as sometimes the call will
        become async).  Use like:
-
        method: deferForContainer(function (args) {...})
        */
     return function () {
@@ -85,34 +78,25 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       });
     };
   }
-
-  // This is called before activateUI; it doesn't bind anything, but does display
-  // the dock
-  // FIXME: because this module has lots of requirements we can't do
-  // this before those requirements are loaded.  Maybe worth splitting
-  // this out?  OTOH, in production we should have all the files
-  // combined so there's not much problem loading those modules.
-  ui.prepareUI = function () {
-    if (! (document.readyState == "complete" || document.readyState == "interactive")) {
+  ui.prepareUI = function () { // 页面加载完毕前的回调函数
+    if (!(document.readyState == "complete" || document.readyState == "interactive")) {
       // Too soon!  Wait a sec...
       deferringPrepareUI = "deferring";
       document.addEventListener("DOMContentLoaded", function () {
         var d = deferringPrepareUI;
         deferringPrepareUI = null;
         ui.prepareUI();
-        // This happens when ui.activateUI is called before the document has been
-        // loaded:
-        if (d == "activate") {
+        // This happens when ui.activateUI is called before the document has been loaded:
+        if (d == "activate")
           ui.activateUI();
-        }
       });
       return;
     }
-    var container = ui.container = $(templates("interface"));
+    var container = ui.container = $(templates("interface")); //加载容器模板
     assert(container.length);
-    $("body").append(container);
-    fixupAvatars(container);
-    if (session.firstRun && TogetherJS.startTarget) {
+    $("body").append(container); // 将容器追加到界面上
+    fixupAvatars(container); // 设置固定头像
+    if (session.firstRun && TogetherJS.startTarget) { //动画
       // Time at which the UI will be fully ready:
       // (We have to do this because the offset won't be quite right
       // until the animation finishes - attempts to calculate the
@@ -155,35 +139,33 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
         }, 5);
       }, 5);
     }
-    if (TogetherJS.startTarget) {
+    if (TogetherJS.startTarget) { // 更改启动TogetherJS元素的显示内容
       var el = $(TogetherJS.startTarget);
       var text = el.text().toLowerCase().replace(/\s+/g, " ");
       text = text.replace(/^\s*/, "").replace(/\s*$/, "");
-      if (text == "start togetherjs") {
+      if (text == "start togetherjs")
         el.attr("data-end-togetherjs-html", "End TogetherJS");
-      }
       if (el.attr("data-end-togetherjs-html")) {
         el.attr("data-start-togetherjs-html", el.html());
         el.html(el.attr("data-end-togetherjs-html"));
       }
       el.addClass("togetherjs-started");
     }
-    ui.container.find(".togetherjs-window > header, .togetherjs-modal > header").each(function () {
-      $(this).append($('<button class="togetherjs-close"></button>'));
-    });
-
+    ui.container.find(".togetherjs-window > header, .togetherjs-modal > header")
+      .each(function () { //添加关闭图标
+        $(this).append($('<button class="togetherjs-close"></button>'));
+      });
+    // 订阅"disableWebRTC"属性的更改
     TogetherJS.config.track("disableWebRTC", function (hide, previous) {
-      if (hide && ! previous) {
+      if (hide && !previous) {
         ui.container.find("#togetherjs-audio-button").hide();
         adjustDockSize(-1);
-      } else if ((! hide) && previous) {
+      } else if ((!hide) && previous) {
         ui.container.find("#togetherjs-audio-button").show();
         adjustDockSize(1);
       }
     });
-
   };
-
   // After prepareUI, this actually makes the interface live.  We have
   // to do this later because we call prepareUI when many components
   // aren't initialized, so we don't even want the user to be able to
@@ -195,16 +177,14 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       deferringPrepareUI = "activate";
       return;
     }
-    if (! ui.container) {
+    if (!ui.container) {
       ui.prepareUI();
     }
     var container = ui.container;
-
     //create the overlay
-    if($.browser.mobile) {
+    if ($.browser.mobile) {
       // $("body").append( "\x3cdiv class='overlay' style='position: absolute; top: 0; left: 0; background-color: rgba(0,0,0,0); width: 120%; height: 100%; z-index: 1000; margin: -10px'>\x3c/div>" );
     }
-
     // The share link:
     ui.prepareShareLink(container);
     container.find("input.togetherjs-share-link").on("keydown", function (event) {
@@ -215,7 +195,6 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       return undefined;
     });
     session.on("shareId", updateShareLink);
-
     // The chat input element:
     var input = container.find("#togetherjs-chat-input");
     input.bind("keydown", function (event) {
@@ -228,7 +207,6 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
         return false;
       }
     });
-
     function submitChat() {
       var val = input.val();
       if ($.trim(val)) {
@@ -261,9 +239,9 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       $("#togetherjs-chat-messages").height($("#togetherjs-chat-messages").height() - diff);
       return false;
     });
-
-    util.testExpose({submitChat: submitChat});
-
+    util.testExpose({
+      submitChat: submitChat
+    });
     // Moving the window:
     // FIXME: this should probably be stickier, and not just move the window around
     // so abruptly
@@ -284,7 +262,6 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
         var fromBottom = $window.height() + window.pageYOffset - event2.pageY;
         // FIXME: this is to temporarily disable the bottom view:
         fromBottom = 10000;
-
         var pos;
         if (fromLeft < fromRight && fromLeft < fromBottom) {
           pos = "left";
@@ -314,7 +291,6 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       });
       return false;
     });
-
     function openDock() {
       $('.togetherjs-window').animate({
         opacity: 1
@@ -325,41 +301,36 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       $('#togetherjs-dock #togetherjs-buttons').animate({
         opacity: 1
       });
-
       //for iphone
-      if($(window).width() < 480) {
+      if ($(window).width() < 480) {
         $('.togetherjs-dock-right').animate({
           width: "204px"
         }, {
-          duration:60, easing:"linear"
+          duration: 60,
+          easing: "linear"
         });
       }
-
       //for ipad
       else {
         $('.togetherjs-dock-right').animate({
           width: "27%"
         }, {
-          duration:60, easing:"linear"
+          duration: 60,
+          easing: "linear"
         });
       }
-
-
       // add bg overlay
       // $("body").append( "\x3cdiv class='overlay' style='position: absolute; top: 0; left: -2px; background-color: rgba(0,0,0,0.5); width: 200%; height: 400%; z-index: 1000; margin: 0px;'>\x3c/div>" );
-
       //disable vertical scrolling
       // $("body").css({
       //   "position": "fixed",
       //   top: 0,
       //   left: 0
       // });
-
       //replace the anchor icon
       var src = "/togetherjs/images/togetherjs-logo-close.png";
       $("#togetherjs-dock-anchor #togetherjs-dock-anchor-horizontal img").attr("src", src);
     }
-
     function closeDock() {
       //enable vertical scrolling
       $("body").css({
@@ -367,11 +338,9 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
         top: "",
         left: ""
       });
-
       //replace the anchor icon
       var src = "/togetherjs/images/togetherjs-logo-open.png";
       $("#togetherjs-dock-anchor #togetherjs-dock-anchor-horizontal img").attr("src", src);
-
       $('.togetherjs-window').animate({
         opacity: 0
       });
@@ -384,50 +353,41 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       $('.togetherjs-dock-right').animate({
         width: "40px"
       }, {
-        duration:60, easing:"linear"
+        duration: 60,
+        easing: "linear"
       });
-
       // remove bg overlay
       //$(".overlay").remove();
     }
-
     // Setting the anchor button + dock mobile actions
-    if($.browser.mobile) {
-
+    if ($.browser.mobile) {
       // toggle the audio button
       $("#togetherjs-audio-button").click(function () {
         windowing.toggle("#togetherjs-rtc-not-supported");
       });
-
       // toggle the profile button
       $("#togetherjs-profile-button").click(function () {
         windowing.toggle("#togetherjs-menu-window");
       });
-
       // $("body").append( "\x3cdiv class='overlay' style='position: absolute; top: 0; left: -2px; background-color: rgba(0,0,0,0.5); width: 200%; height: 400%; z-index: 1000; margin: 0px'>\x3c/div>" );
-
       //disable vertical scrolling
       // $("body").css({
       //   "position": "fixed",
       //   top: 0,
       //   left: 0
       // });
-
       //replace the anchor icon
       var src = "/togetherjs/images/togetherjs-logo-close.png";
       $("#togetherjs-dock-anchor #togetherjs-dock-anchor-horizontal img").attr("src", src);
-
-      $("#togetherjs-dock-anchor").toggle(function() {
-          closeDock();
-        },function(){
-          openDock();
+      $("#togetherjs-dock-anchor").toggle(function () {
+        closeDock();
+      }, function () {
+        openDock();
       });
     }
-
     $("#togetherjs-share-button").click(function () {
       windowing.toggle("#togetherjs-share");
     });
-
     $("#togetherjs-profile-button").click(function (event) {
       if ($.browser.mobile) {
         windowing.show("#togetherjs-menu-window");
@@ -437,13 +397,11 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       event.stopPropagation();
       return false;
     });
-
-    $("#togetherjs-menu-feedback, #togetherjs-menu-feedback-button").click(function(){
+    $("#togetherjs-menu-feedback, #togetherjs-menu-feedback-button").click(function () {
       windowing.hide();
       hideMenu();
       windowing.show("#togetherjs-feedback-form");
     });
-
     $("#togetherjs-menu-help, #togetherjs-menu-help-button").click(function () {
       windowing.hide();
       hideMenu();
@@ -452,7 +410,6 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
         walkthrough.start(false);
       });
     });
-
     $("#togetherjs-menu-update-name").click(function () {
       var input = $("#togetherjs-menu .togetherjs-self-name");
       input.css({
@@ -461,12 +418,10 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       ui.displayToggle("#togetherjs-menu .togetherjs-self-name");
       $("#togetherjs-menu .togetherjs-self-name").focus();
     });
-
     $("#togetherjs-menu-update-name-button").click(function () {
       windowing.show("#togetherjs-edit-name-window");
       $("#togetherjs-edit-name-window input").focus();
     });
-
     $("#togetherjs-menu .togetherjs-self-name").bind("keyup change", function (event) {
       console.log("alrighty", event);
       if (event.which == 13) {
@@ -476,26 +431,23 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       var val = $("#togetherjs-menu .togetherjs-self-name").val();
       console.log("values!!", val);
       if (val) {
-        peers.Self.update({name: val});
+        peers.Self.update({
+          name: val
+        });
       }
     });
-
     $("#togetherjs-menu-update-avatar, #togetherjs-menu-update-avatar-button").click(function () {
       hideMenu();
       windowing.show("#togetherjs-avatar-edit");
     });
-
     $("#togetherjs-menu-end, #togetherjs-menu-end-button").click(function () {
       hideMenu();
       windowing.show("#togetherjs-confirm-end");
     });
-
     $("#togetherjs-end-session").click(function () {
       session.close();
       //$(".overlay").remove();
-
     });
-
     $("#togetherjs-menu-update-color").click(function () {
       var picker = $("#togetherjs-pick-color");
       if (picker.is(":visible")) {
@@ -507,7 +459,6 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       picker.find(".togetherjs-swatch-active").removeClass("togetherjs-swatch-active");
       picker.find(".togetherjs-swatch[data-color=\"" + peers.Self.color + "\"]").addClass("togetherjs-swatch-active");
     });
-
     $("#togetherjs-pick-color").click(".togetherjs-swatch", function (event) {
       var swatch = $(event.target);
       var color = swatch.attr("data-color");
@@ -517,13 +468,11 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       event.stopPropagation();
       return false;
     });
-
     $("#togetherjs-pick-color").click(function (event) {
       $("#togetherjs-pick-color").hide();
       event.stopPropagation();
       return false;
     });
-
     COLORS.forEach(function (color) {
       var el = templating.sub("swatch");
       el.attr("data-color", color);
@@ -534,14 +483,12 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       });
       $("#togetherjs-pick-color").append(el);
     });
-
     $("#togetherjs-chat-button").click(function () {
       windowing.toggle("#togetherjs-chat");
     });
-
     session.on("display-window", function (id, element) {
       if (id == "togetherjs-chat") {
-        if (! $.browser.mobile) {
+        if (!$.browser.mobile) {
           $("#togetherjs-chat-input").focus();
         }
       } else if (id == "togetherjs-share") {
@@ -551,14 +498,12 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
         }
       }
     });
-
     container.find("#togetherjs-chat-notifier").click(function (event) {
       if ($(event.target).is("a") || container.is(".togetherjs-close")) {
         return;
       }
       windowing.show("#togetherjs-chat");
     });
-
     // FIXME: Don't think this makes sense
     $(".togetherjs header.togetherjs-title").each(function (index, item) {
       var button = $('<button class="togetherjs-minimize"></button>');
@@ -568,18 +513,16 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       });
       $(item).append(button);
     });
-
     $("#togetherjs-avatar-done").click(function () {
       ui.displayToggle("#togetherjs-no-avatar-edit");
     });
-
-    $("#togetherjs-self-color").css({backgroundColor: peers.Self.color});
-
+    $("#togetherjs-self-color").css({
+      backgroundColor: peers.Self.color
+    });
     var avatar = peers.Self.avatar;
     if (avatar) {
       $("#togetherjs-self-avatar").attr("src", avatar);
     }
-
     var starterButton = $("#togetherjs-starter button");
     starterButton.click(function () {
       windowing.show("#togetherjs-about");
@@ -588,13 +531,11 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       starterButton.attr("data-start-text", starterButton.text());
       starterButton.text("End TogetherJS Session");
     }
-
     ui.activateAvatarEdit(container, {
       onSave: function () {
         windowing.hide("#togetherjs-avatar-edit");
       }
     });
-
     TogetherJS.config.track("inviteFromRoom", function (inviter, previous) {
       if (inviter) {
         container.find("#togetherjs-invite").show();
@@ -602,16 +543,13 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
         container.find("#togetherjs-invite").hide();
       }
     });
-
     container.find("#togetherjs-menu-refresh-invite").click(refreshInvite);
     container.find("#togetherjs-menu-invite-anyone").click(function () {
       invite(null);
     });
-
     // The following lines should be at the end of this function
     // (new code goes above)
     session.emit("new-element", ui.container);
-
     if (finishedAt && finishedAt > Date.now()) {
       setTimeout(function () {
         finishedAt = null;
@@ -620,25 +558,22 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
     } else {
       session.emit("ui-ready", ui);
     }
-
   }; // End ui.activateUI()
-
   ui.activateAvatarEdit = function (container, options) {
     options = options || {};
     var pendingImage = null;
-
     container.find(".togetherjs-avatar-save").prop("disabled", true);
-
     container.find(".togetherjs-avatar-save").click(function () {
       if (pendingImage) {
-        peers.Self.update({avatar: pendingImage});
+        peers.Self.update({
+          avatar: pendingImage
+        });
         container.find(".togetherjs-avatar-save").prop("disabled", true);
         if (options.onSave) {
           options.onSave();
         }
       }
     });
-
     container.find(".togetherjs-upload-avatar").on("change", function () {
       util.readFileImage(this).then(function (url) {
         sizeDownImage(url).then(function (smallUrl) {
@@ -653,9 +588,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
         });
       });
     });
-
   };
-
   function sizeDownImage(imageUrl) {
     return util.Deferred(function (def) {
       var $canvas = $("<canvas>");
@@ -677,19 +610,17 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       });
     });
   }
-
-  function fixupAvatars(container) {
+  function fixupAvatars(container) { // 设置固定头像
     /* All <div class="togetherjs-person" /> elements need an element inside,
        so we add that element here */
     container.find(".togetherjs-person").each(function () {
       var $this = $(this);
       var inner = $this.find(".togetherjs-person-avatar-swatch");
-      if (! inner.length) {
+      if (!inner.length) {
         $this.append('<div class="togetherjs-person-avatar-swatch"></div>');
       }
     });
   }
-
   ui.prepareShareLink = function (container) {
     container.find("input.togetherjs-share-link").click(function () {
       $(this).select();
@@ -713,9 +644,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
     });
     updateShareLink();
   };
-
   // Menu
-
   function showMenu(event) {
     var el = $("#togetherjs-menu");
     assert(el.length);
@@ -723,7 +652,6 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
     bindMenu();
     $(document).bind("click", maybeHideMenu);
   }
-
   function bindMenu() {
     var el = $("#togetherjs-menu:visible");
     if (el.length) {
@@ -735,7 +663,6 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       });
     }
   }
-
   function bindPicker() {
     var picker = $("#togetherjs-pick-color:visible");
     if (picker.length) {
@@ -747,12 +674,10 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       });
     }
   }
-
   session.on("resize", function () {
     bindMenu();
     bindPicker();
   });
-
   function toggleMenu() {
     if ($("#togetherjs-menu").is(":visible")) {
       hideMenu();
@@ -760,7 +685,6 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       showMenu();
     }
   }
-
   function hideMenu() {
     var el = $("#togetherjs-menu");
     el.hide();
@@ -768,7 +692,6 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
     ui.displayToggle("#togetherjs-self-name-display");
     $("#togetherjs-pick-color").hide();
   }
-
   function maybeHideMenu(event) {
     var t = event.target;
     while (t) {
@@ -780,29 +703,22 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
     }
     hideMenu();
   }
-
-  function adjustDockSize(buttons) {
-    /* Add or remove spots from the dock; positive number to
-       add button(s), negative number to remove button(s)
-       */
+  function adjustDockSize(buttons) { // 显示或隐藏dock(1显示,-1隐藏)
     assert(typeof buttons == "number");
     assert(buttons && Math.floor(buttons) == buttons);
     var iface = $("#togetherjs-dock");
     var newHeight = iface.height() + (BUTTON_HEIGHT * buttons);
-    assert(newHeight >= BUTTON_HEIGHT * 3, "Height went too low (", newHeight,
-           "), should never be less than 3 buttons high (", BUTTON_HEIGHT * 3, ")");
+    assert(newHeight >= BUTTON_HEIGHT * 3, "Height went too low (", newHeight, "), should never be less than 3 buttons high (", BUTTON_HEIGHT * 3, ")");
     iface.css({
       height: newHeight + "px"
     });
   }
-
   // Misc
-
   function updateShareLink() {
     var input = $("input.togetherjs-share-link");
     var link = $("a.togetherjs-share-link");
     var display = $("#togetherjs-session-id");
-    if (! session.shareId) {
+    if (!session.shareId) {
       input.val("");
       link.attr("href", "#");
       display.text("(none)");
@@ -812,22 +728,17 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       display.text(session.shareId);
     }
   }
-
   session.on("close", function () {
-
-    if($.browser.mobile) {
+    if ($.browser.mobile) {
       // remove bg overlay
       //$(".overlay").remove();
-
       //after hitting End, reset window draggin
       $("body").css({
         "position": "",
         top: "",
         left: ""
       });
-
     }
-
     if (ui.container) {
       ui.container.remove();
       ui.container = null;
@@ -848,7 +759,6 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       el.removeClass("togetherjs-started");
     }
   });
-
   ui.chat = {
     text: function (attrs) {
       assert(typeof attrs.text == "string");
@@ -857,14 +767,14 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       var date = attrs.date || Date.now();
       var lastEl = ui.container.find("#togetherjs-chat .togetherjs-chat-message");
       if (lastEl.length) {
-        lastEl = $(lastEl[lastEl.length-1]);
+        lastEl = $(lastEl[lastEl.length - 1]);
       }
       var lastDate = null;
       if (lastEl) {
         lastDate = parseInt(lastEl.attr("data-date"), 10);
       }
       if (lastEl && lastEl.attr("data-person") == attrs.peer.id &&
-          lastDate && date < lastDate + COLLAPSE_MESSAGE_LIMIT) {
+        lastDate && date < lastDate + COLLAPSE_MESSAGE_LIMIT) {
         lastEl.attr("data-date", date);
         var content = lastEl.find(".togetherjs-chat-content");
         assert(content.length);
@@ -883,7 +793,6 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
         .attr("data-message-id", attrs.messageId);
       ui.chat.add(el, attrs.messageId, attrs.notify);
     },
-
     joinedSession: function (attrs) {
       assert(attrs.peer);
       var date = attrs.date || Date.now();
@@ -894,7 +803,6 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       // FIXME: should bind the notification to the dock location
       ui.chat.add(el, attrs.peer.className("join-message-"), 4000);
     },
-
     leftSession: function (attrs) {
       assert(attrs.peer);
       var date = attrs.date || Date.now();
@@ -906,9 +814,8 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       // FIXME: should bind the notification to the dock location
       ui.chat.add(el, attrs.peer.className("join-message-"), 4000);
     },
-
     system: function (attrs) {
-      assert(! attrs.peer);
+      assert(!attrs.peer);
       assert(typeof attrs.text == "string");
       var date = attrs.date || Date.now();
       var el = templating.sub("chat-system", {
@@ -917,12 +824,10 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       });
       ui.chat.add(el, undefined, true);
     },
-
     clear: deferForContainer(function () {
       var container = ui.container.find("#togetherjs-chat-messages");
       container.empty();
     }),
-
     urlChange: function (attrs) {
       assert(attrs.peer);
       assert(typeof attrs.url == "string");
@@ -959,15 +864,14 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
         }
         location.href = url;
       });
-      var notify = ! attrs.sameUrl;
-      if (attrs.sameUrl && ! $("#" + realId).length) {
+      var notify = !attrs.sameUrl;
+      if (attrs.sameUrl && !$("#" + realId).length) {
         // Don't bother showing a same-url notification, if no previous notification
         // had been shown
         return;
       }
       ui.chat.add(el, messageId, notify);
     },
-
     invite: function (attrs) {
       assert(attrs.peer);
       assert(typeof attrs.url == "string");
@@ -989,9 +893,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       }
       ui.chat.add(el, messageId, true);
     },
-
     hideTimeout: null,
-
     add: deferForContainer(function (el, id, notify) {
       if (id) {
         el.attr("id", "togetherjs-chat-" + util.safeClassName(id));
@@ -1001,7 +903,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       var popup = ui.container.find("#togetherjs-chat-notifier");
       container.append(el);
       ui.chat.scroll();
-      var doNotify = !! notify;
+      var doNotify = !!notify;
       var section = popup.find("#togetherjs-chat-notifier-message");
       if (notify && visibilityApi.hidden()) {
         ui.container.find("#togetherjs-notification")[0].play();
@@ -1015,10 +917,10 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       if (doNotify) {
         section.empty();
         section.append(el.clone(true, true));
-        if (section.data("message-id") != id)  {
+        if (section.data("message-id") != id) {
           section.data("message-id", id || "");
           windowing.show(popup);
-        } else if (! popup.is(":visible")) {
+        } else if (!popup.is(":visible")) {
           windowing.show(popup);
         }
         if (typeof notify == "number") {
@@ -1034,52 +936,46 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
         }
       }
     }),
-
     scroll: deferForContainer(function () {
       var container = ui.container.find("#togetherjs-chat-messages")[0];
       container.scrollTop = container.scrollHeight;
     })
-
   };
-
   session.on("display-window", function (id, win) {
     if (id == "togetherjs-chat") {
       ui.chat.scroll();
       windowing.hide("#togetherjs-chat-notifier");
     }
   });
-
   /* This class is bound to peers.Peer instances as peer.view.
      The .update() method is regularly called by peer objects when info changes. */
   ui.PeerView = util.Class({
-
     constructor: function (peer) {
       assert(peer.isSelf !== undefined, "PeerView instantiated with non-Peer object");
       this.peer = peer;
       this.dockClick = this.dockClick.bind(this);
     },
-
     /* Takes an element and sets any person-related attributes on the element
        Different from updates, which use the class names we set here: */
     setElement: function (el) {
       var count = 0;
       var classes = ["togetherjs-person", "togetherjs-person-status",
-                     "togetherjs-person-name", "togetherjs-person-name-abbrev",
-                     "togetherjs-person-bgcolor", "togetherjs-person-swatch",
-                     "togetherjs-person-status", "togetherjs-person-role",
-                     "togetherjs-person-url", "togetherjs-person-url-title",
-                     "togetherjs-person-bordercolor"];
+        "togetherjs-person-name", "togetherjs-person-name-abbrev",
+        "togetherjs-person-bgcolor", "togetherjs-person-swatch",
+        "togetherjs-person-status", "togetherjs-person-role",
+        "togetherjs-person-url", "togetherjs-person-url-title",
+        "togetherjs-person-bordercolor"
+      ];
       classes.forEach(function (cls) {
         var els = el.find("." + cls);
         els.addClass(this.peer.className(cls + "-"));
         count += els.length;
       }, this);
-      if (! count) {
+      if (!count) {
         console.warn("setElement(", el, ") doesn't contain any person items");
       }
       this.updateDisplay(el);
     },
-
     updateDisplay: deferForContainer(function (container) {
       container = container || ui.container;
       var abbrev = this.peer.name;
@@ -1151,16 +1047,16 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
           }
         }).bind(this));
         $("#togetherjs-menu-avatar").attr("src", this.peer.avatar);
-        if (! this.peer.name) {
+        if (!this.peer.name) {
           $("#togetherjs-menu .togetherjs-person-name-self").text(this.peer.defaultName);
         }
       }
       if (this.peer.url != session.currentUrl()) {
         container.find("." + this.peer.className("togetherjs-person-"))
-            .addClass("togetherjs-person-other-url");
+          .addClass("togetherjs-person-other-url");
       } else {
         container.find("." + this.peer.className("togetherjs-person-"))
-            .removeClass("togetherjs-person-other-url");
+          .removeClass("togetherjs-person-other-url");
       }
       if (this.peer.following) {
         if (this.followCheckbox) {
@@ -1175,9 +1071,8 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       updateChatParticipantList();
       this.updateFollow();
     }),
-
     update: function () {
-      if (! this.peer.isSelf) {
+      if (!this.peer.isSelf) {
         if (this.peer.status == "live") {
           this.dock();
         } else {
@@ -1187,10 +1082,9 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       this.updateDisplay();
       this.updateUrlDisplay();
     },
-
     updateUrlDisplay: function (force) {
       var url = this.peer.url;
-      if ((! url) || (url == this._lastUpdateUrlDisplay && ! force)) {
+      if ((!url) || (url == this._lastUpdateUrlDisplay && !force)) {
         return;
       }
       this._lastUpdateUrlDisplay = url;
@@ -1202,51 +1096,40 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
         sameUrl: sameUrl
       });
     },
-
     urlNudge: function () {
       // FIXME: do something more distinct here
       this.updateUrlDisplay(true);
     },
-
     notifyJoined: function () {
       ui.chat.joinedSession({
         peer: this.peer
       });
     },
-
     // when there are too many participants in the dock, consolidate the participants to one avatar, and on mouseOver, the dock expands down to reveal the rest of the participants
     // if there are X users in the session
     // then hide the users in the dock
     // and shrink the size of the dock
     // and if you rollover the dock, it expands and reveals the rest of the participants in the dock
-
     //if users hit X then show the participant button with the consol
-
     dock: deferForContainer(function () {
-
       var numberOfUsers = peers.getAllPeers().length;
-
       // collapse the Dock if too many users
       function CollapsedDock() {
         // decrease/reset dock height
         $("#togetherjs-dock").css("height", 260);
         //replace participant button
-        $("#togetherjs-dock-participants").replaceWith("<button id='togetherjs-participantlist-button' class='togetherjs-button'><div class='togetherjs-tooltip togetherjs-dock-person-tooltip'><span class='togetherjs-person-name'>Participants</span><span class='togetherjs-person-tooltip-arrow-r'></span></div><div class='togetherjs-person togetherjs-person-status-overlay' title='Participant List' style='background-image: url("+TogetherJS.baseUrl+"/togetherjs/images/robot-avatar.png); border-color: rgb(255, 0, 0);'></div></button>");
+        $("#togetherjs-dock-participants").replaceWith("<button id='togetherjs-participantlist-button' class='togetherjs-button'><div class='togetherjs-tooltip togetherjs-dock-person-tooltip'><span class='togetherjs-person-name'>Participants</span><span class='togetherjs-person-tooltip-arrow-r'></span></div><div class='togetherjs-person togetherjs-person-status-overlay' title='Participant List' style='background-image: url(" + TogetherJS.baseUrl + "/togetherjs/images/robot-avatar.png); border-color: rgb(255, 0, 0);'></div></button>");
         // new full participant window created on toggle
         $("#togetherjs-participantlist-button").click(function () {
           windowing.toggle("#togetherjs-participantlist");
         });
       }
-
       // FIXME: turned off for now
-      if( numberOfUsers >= 5 && false) {
+      if (numberOfUsers >= 5 && false) {
         CollapsedDock();
       } else {
         // reset
-
       }
-
-
       if (this.dockElement) {
         return;
       }
@@ -1271,7 +1154,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       }).bind(this));
       this.followCheckbox = this.detailElement.find("#" + followId);
       this.followCheckbox.change(function () {
-        if (! this.checked) {
+        if (!this.checked) {
           this.peer.unfollow();
         }
         // Following doesn't happen until the window is closed
@@ -1284,24 +1167,25 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
         if (this.detailElement.is(":visible")) {
           windowing.hide(this.detailElement);
         } else {
-          windowing.show(this.detailElement, {bind: this.dockElement});
+          windowing.show(this.detailElement, {
+            bind: this.dockElement
+          });
           this.scrollTo();
           this.cursor().element.animate({
-            opacity:0.3
+            opacity: 0.3
           }).animate({
-            opacity:1
+            opacity: 1
           }).animate({
-            opacity:0.3
+            opacity: 0.3
           }).animate({
-            opacity:1
+            opacity: 1
           });
         }
       }).bind(this));
       this.updateFollow();
     }),
-
     undock: function () {
-      if (! this.dockElement) {
+      if (!this.dockElement) {
         return;
       }
       this.dockElement.animateDockExit().promise().then((function () {
@@ -1312,25 +1196,23 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
         adjustDockSize(-1);
       }).bind(this));
     },
-
     scrollTo: function () {
       if (this.peer.url != session.currentUrl()) {
         return;
       }
       var pos = this.peer.scrollPosition;
-      if (! pos) {
+      if (!pos) {
         console.warn("Peer has no scroll position:", this.peer);
         return;
       }
       pos = elementFinder.pixelForPosition(pos);
       $("html, body").easeTo(pos);
     },
-
     updateFollow: function () {
-      if (! this.peer.url) {
+      if (!this.peer.url) {
         return;
       }
-      if (! this.detailElement) {
+      if (!this.detailElement) {
         return;
       }
       var same = this.detailElement.find(".togetherjs-same-url");
@@ -1343,7 +1225,6 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
         different.show();
       }
     },
-
     maybeHideDetailWindow: function (windows) {
       if (this.detailElement && windows[0] && windows[0][0] === this.detailElement[0]) {
         if (this.followCheckbox[0].checked) {
@@ -1353,40 +1234,35 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
         }
       }
     },
-
     dockClick: function () {
       // FIXME: scroll to person
     },
-
     cursor: function () {
       return require("cursor").getClient(this.peer.id);
     },
-
     destroy: function () {
       // FIXME: should I get rid of the dockElement?
       session.off("hide-window", this.maybeHideDetailWindow);
     }
   });
-
   function updateChatParticipantList() {
     var live = peers.getAllPeers(true);
     if (live.length) {
       ui.displayToggle("#togetherjs-chat-participants");
       $("#togetherjs-chat-participant-list").text(
-        live.map(function (p) {return p.name;}).join(", "));
+        live.map(function (p) {
+          return p.name;
+        }).join(", "));
     } else {
       ui.displayToggle("#togetherjs-chat-no-participants");
     }
   }
-
   function inviteHubUrl() {
     var base = TogetherJS.config.get("inviteFromRoom");
     assert(base);
     return util.makeUrlAbsolute(base, session.hubUrl());
   }
-
   var inRefresh = false;
-
   function refreshInvite() {
     if (inRefresh) {
       return;
@@ -1395,14 +1271,16 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
     require(["who"], function (who) {
       var def = who.getList(inviteHubUrl());
       function addUser(user, before) {
-        var item = templating.sub("invite-user-item", {peer: user});
+        var item = templating.sub("invite-user-item", {
+          peer: user
+        });
         item.attr("data-clientid", user.id);
         if (before) {
           item.insertBefore(before);
         } else {
           $("#togetherjs-invite-users").append(item);
         }
-        item.click(function() {
+        item.click(function () {
           invite(user.clientId);
         });
       }
@@ -1419,7 +1297,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
         var pos = 0;
         ui.container.find("#togetherjs-invite-users .togetherjs-menu-item").each(function () {
           var $this = $(this);
-          if (finished && ! users[$this.attr("data-clientid")]) {
+          if (finished && !users[$this.attr("data-clientid")]) {
             $this.remove();
             return;
           }
@@ -1434,7 +1312,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
             pos++;
           }
         });
-        for (var i=pos; i<sorted.length; i++) {
+        for (var i = pos; i < sorted.length; i++) {
           addUser(sorted[pos]);
         }
       }
@@ -1445,17 +1323,19 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       def.progress(refresh);
     });
   }
-
   session.hub.on("invite", function (msg) {
     if (msg.forClientId && msg.clientId != peers.Self.id) {
       return;
     }
     require(["who"], function (who) {
       var peer = who.ExternalPeer(msg.userInfo.clientId, msg.userInfo);
-      ui.chat.invite({peer: peer, url: msg.url, forEveryone: ! msg.forClientId});
+      ui.chat.invite({
+        peer: peer,
+        url: msg.url,
+        forEveryone: !msg.forClientId
+      });
     });
   });
-
   function invite(clientId) {
     require(["who"], function (who) {
       // FIXME: use the return value of this to give a signal that
@@ -1465,13 +1345,13 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       });
     });
   }
-
-  ui.showUrlChangeMessage = deferForContainer(function (peer, url) {
-    var window = templating.sub("url-change", {peer: peer});
+  ui.showUrlChangeMessage = deferForContainer(function (peer, url) { // 显示urlChange消息
+    var window = templating.sub("url-change", {
+      peer: peer
+    });
     ui.container.append(window);
     windowing.show(window);
   });
-
   session.hub.on("url-change-nudge", function (msg) {
     if (msg.to && msg.to != session.clientId) {
       // Not directed to us
@@ -1479,18 +1359,16 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
     }
     msg.peer.urlNudge();
   });
-
   session.on("new-element", function (el) {
     if (TogetherJS.config.get("toolName")) {
       ui.updateToolName(el);
     }
   });
-
   var setToolName = false;
   ui.updateToolName = function (container) {
     container = container || $(document.body);
     var name = TogetherJS.config.get("toolName");
-    if (setToolName && ! name) {
+    if (setToolName && !name) {
       name = "TogetherJS";
     }
     if (name) {
@@ -1498,11 +1376,8 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       setToolName = true;
     }
   };
-
   TogetherJS.config.track("toolName", function (name) {
     ui.updateToolName(ui.container);
   });
-
   return ui;
-
 });

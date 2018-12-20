@@ -1,29 +1,25 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
-
+// 成员列表类
 define(["util", "session", "storage", "require", "templates"], function (util, session, storage, require, templates) {
   var peers = util.Module("peers");
   var assert = util.assert;
-  var CHECK_ACTIVITY_INTERVAL = 10*1000; // Every 10 seconds see if someone has gone idle
-  var IDLE_TIME = 3*60*1000; // Idle time is 3 minutes
-  var TAB_IDLE_TIME = 2*60*1000; // When you tab away, after two minutes you'll say you are idle
-  var BYE_TIME = 10*60*1000; // After 10 minutes of inactivity the person is considered to be "gone"
-
+  var CHECK_ACTIVITY_INTERVAL = 10 * 1000; // Every 10 seconds see if someone has gone idle
+  var IDLE_TIME = 3 * 60 * 1000; // Idle time is 3 minutes
+  var TAB_IDLE_TIME = 2 * 60 * 1000; // When you tab away, after two minutes you'll say you are idle
+  var BYE_TIME = 10 * 60 * 1000; // After 10 minutes of inactivity the person is considered to be "gone"
   var ui;
   require(["ui"], function (uiModule) {
     ui = uiModule;
   });
-
   var DEFAULT_NICKNAMES = templates("names").split(/,\s*/g);
   var Peer = util.Class({
-
     isSelf: false,
-
     constructor: function (id, attrs) {
       attrs = attrs || {};
       assert(id);
-      assert(! Peer.peers[id]);
+      assert(!Peer.peers[id]);
       this.id = id;
       this.identityId = attrs.identityId || null;
       this.status = attrs.status || "live";
@@ -48,11 +44,9 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
       }
       this.view.update();
     },
-
     repr: function () {
       return "Peer(" + JSON.stringify(this.id) + ")";
     },
-
     serialize: function () {
       return {
         id: this.id,
@@ -69,23 +63,21 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
         following: this.following
       };
     },
-
     destroy: function () {
       this.view.destroy();
       delete Peer.peers[this.id];
     },
-
     updateMessageDate: function (msg) {
       if (this.idle == "inactive") {
-        this.update({idle: "active"});
+        this.update({
+          idle: "active"
+        });
       }
-      if (this.status == "bye") {
+      if (this.status == "bye") //切换为live状态
         this.unbye();
-      }
-      this.lastMessageDate = Date.now();
+      this.lastMessageDate = Date.now();//更新最后操作时间
     },
-
-    updateFromHello: function (msg) {
+    updateFromHello: function (msg) { // 根据msg更新用户信息
       var urlUpdated = false;
       var activeRTC = false;
       var identityUpdated = false;
@@ -123,7 +115,7 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
         identityUpdated = true;
       }
       if (msg.isClient !== undefined) {
-        this.isCreator = ! msg.isClient;
+        this.isCreator = !msg.isClient;
       }
       if (this.status != "live") {
         this.status = "live";
@@ -133,22 +125,16 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
         this.idle = "active";
         peers.emit("idle-updated", this);
       }
-      if (msg.rtcSupported) {
+      if (msg.rtcSupported) // 更新RTC功能
         peers.emit("rtc-supported", this);
-      }
-      if (urlUpdated) {
+      if (urlUpdated) // 更新url信息
         peers.emit("url-updated", this);
-      }
-      if (identityUpdated) {
+      if (identityUpdated) //更新userId信息
         peers.emit("identity-updated", this);
-      }
-      // FIXME: I can't decide if this is the only time we need to emit
-      // this message (and not .update() or other methods)
-      if (this.following) {
+      // FIXME: I can't decide if this is the only time we need to emit this message (and not .update() or other methods)
+      if (this.following)
         session.emit("follow-peer", this);
-      }
     },
-
     update: function (attrs) {
       // FIXME: should probably test that only a couple attributes are settable
       // particularly status and idle
@@ -160,12 +146,10 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
       }
       this.view.update();
     },
-
     className: function (prefix) {
       prefix = prefix || "";
       return prefix + util.safeClassName(this.id);
     },
-
     bye: function () {
       if (this.status != "bye") {
         this.status = "bye";
@@ -173,15 +157,13 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
       }
       this.view.update();
     },
-
     unbye: function () {
-      if (this.status == "bye") {
+      if (this.status == "bye") { // 更改为live状态
         this.status = "live";
         peers.emit("status-updated", this);
       }
-      this.view.update();
+      this.view.update(); // 页面更新
     },
-
     nudge: function () {
       session.send({
         type: "url-change-nudge",
@@ -189,7 +171,6 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
         to: this.id
       });
     },
-
     follow: function () {
       if (this.following) {
         return;
@@ -205,15 +186,12 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
       this.view.update();
       session.emit("follow-peer", this);
     },
-
     unfollow: function () {
       this.following = false;
       storeSerialization();
       this.view.update();
     }
-
   });
-
   // FIXME: I can't decide where this should actually go, seems weird
   // that it is emitted and handled in the same module
   session.on("follow-peer", function (peer) {
@@ -225,16 +203,12 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
       location.href = url;
     }
   });
-
   Peer.peers = {};
-
   Peer.deserialize = function (obj) {
     obj.fromStorage = true;
     var peer = Peer(obj.id, obj);
   };
-
   peers.Self = undefined;
-
   session.on("start", function () {
     if (peers.Self) {
       return;
@@ -251,16 +225,17 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
       color: null,
       defaultName: null,
       loaded: false,
-      isCreator: ! session.isClient,
-
+      isCreator: !session.isClient,
       update: function (attrs) {
         var updatePeers = false;
         var updateIdle = false;
-        var updateMsg = {type: "peer-update"};
+        var updateMsg = {
+          type: "peer-update"
+        };
         if (typeof attrs.name == "string" && attrs.name != this.name) {
           this.name = attrs.name;
           updateMsg.name = this.name;
-          if (! attrs.fromLoad) {
+          if (!attrs.fromLoad) {
             storage.settings.set("name", this.name);
             updatePeers = true;
           }
@@ -269,7 +244,7 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
           util.assertValidUrl(attrs.avatar);
           this.avatar = attrs.avatar;
           updateMsg.avatar = this.avatar;
-          if (! attrs.fromLoad) {
+          if (!attrs.fromLoad) {
             storage.settings.set("avatar", this.avatar);
             updatePeers = true;
           }
@@ -277,14 +252,14 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
         if (attrs.color && attrs.color != this.color) {
           this.color = attrs.color;
           updateMsg.color = this.color;
-          if (! attrs.fromLoad) {
+          if (!attrs.fromLoad) {
             storage.settings.set("color", this.color);
             updatePeers = true;
           }
         }
         if (attrs.defaultName && attrs.defaultName != this.defaultName) {
           this.defaultName = attrs.defaultName;
-          if (! attrs.fromLoad) {
+          if (!attrs.fromLoad) {
             storage.settings.set("defaultName", this.defaultName);
             updatePeers = true;
           }
@@ -299,56 +274,52 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
           peers.emit("idle-updated", this);
         }
         this.view.update();
-        if (updatePeers && ! attrs.fromLoad) {
+        if (updatePeers && !attrs.fromLoad) {
           session.emit("self-updated");
           session.send(updateMsg);
         }
-        if (updateIdle && ! attrs.fromLoad) {
+        if (updateIdle && !attrs.fromLoad) {
           session.send({
             type: "idle-status",
             idle: this.idle
           });
         }
       },
-
       className: function (prefix) {
         prefix = prefix || "";
         return prefix + "self";
       },
-
       _loadFromSettings: function () {
         return util.resolveMany(
           storage.settings.get("name"),
           storage.settings.get("avatar"),
           storage.settings.get("defaultName"),
           storage.settings.get("color")).then((function (name, avatar, defaultName, color) {
-            if (! defaultName) {
-              defaultName = util.pickRandom(DEFAULT_NICKNAMES);
-
-              storage.settings.set("defaultName", defaultName);
+          if (!defaultName) {
+            defaultName = util.pickRandom(DEFAULT_NICKNAMES);
+            storage.settings.set("defaultName", defaultName);
+          }
+          if (!color) {
+            color = Math.floor(Math.random() * 0xffffff).toString(16);
+            while (color.length < 6) {
+              color = "0" + color;
             }
-            if (! color) {
-              color = Math.floor(Math.random() * 0xffffff).toString(16);
-              while (color.length < 6) {
-                color = "0" + color;
-              }
-              color = "#" + color;
-              storage.settings.set("color", color);
-            }
-            if (! avatar) {
-              avatar = TogetherJS.baseUrl + "/togetherjs/images/default-avatar.png";
-            }
-            this.update({
-              name: name,
-              avatar: avatar,
-              defaultName: defaultName,
-              color: color,
-              fromLoad: true
-            });
-            peers._SelfLoaded.resolve();
-          }).bind(this)); // FIXME: ignoring error
+            color = "#" + color;
+            storage.settings.set("color", color);
+          }
+          if (!avatar) {
+            avatar = TogetherJS.baseUrl + "/togetherjs/images/default-avatar.png";
+          }
+          this.update({
+            name: name,
+            avatar: avatar,
+            defaultName: defaultName,
+            color: color,
+            fromLoad: true
+          });
+          peers._SelfLoaded.resolve();
+        }).bind(this)); // FIXME: ignoring error
       },
-
       _loadFromApp: function () {
         // FIXME: I wonder if these should be optionally functions?
         // We could test typeof==function to distinguish between a getter and a concrete value
@@ -401,22 +372,19 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
         }
       }
     });
-
     peers.Self.view = ui.PeerView(peers.Self);
     storage.tab.get("peerCache").then(deserialize);
-    peers.Self._loadFromSettings().then(function() {
+    peers.Self._loadFromSettings().then(function () {
       peers.Self._loadFromApp();
       peers.Self.view.update();
       session.emit("self-updated");
     });
   });
-
   session.on("refresh-user-data", function () {
     if (peers.Self) {
       peers.Self._loadFromApp();
     }
   });
-
   TogetherJS.config.track(
     "getUserName",
     TogetherJS.config.track(
@@ -431,9 +399,7 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
       )
     )
   );
-
   peers._SelfLoaded = util.Deferred();
-
   function serialize() {
     var peers = [];
     util.forEachAttr(Peer.peers, function (peer) {
@@ -443,39 +409,34 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
       peers: peers
     };
   }
-
   function deserialize(obj) {
-    if (! obj) {
+    if (!obj) {
       return;
     }
     obj.peers.forEach(function (peer) {
       Peer.deserialize(peer);
     });
   }
-
-  peers.getPeer = function getPeer(id, message, ignoreMissing) {
-    assert(id);
-    var peer = Peer.peers[id];
-    if (id === session.clientId) {
+  peers.getPeer = function getPeer(clientId, message, ignoreMissing) {
+    assert(clientId);
+    var peer = Peer.peers[clientId];
+    if (clientId === session.clientId) //返回自身引用
       return peers.Self;
-    }
-    if (message && ! peer) {
-      peer = Peer(id, {fromHelloMessage: message});
+    if (message && !peer) { //有msg但没有peer对象,则创建一个新Peer对象
+      peer = Peer(clientId, {
+        fromHelloMessage: message
+      });
       return peer;
     }
-    if (ignoreMissing && !peer) {
+    if (ignoreMissing && !peer)
       return null;
-    }
-    assert(peer, "No peer with id:", id);
-    if (message &&
-        (message.type == "hello" || message.type == "hello-back" ||
-         message.type == "peer-update")) {
+    assert(peer, "No peer with clientId:", clientId);
+    if (message && (["hello", "hello-back", "peer-update"].includes(message.type))) {
       peer.updateFromHello(message);
       peer.view.update();
     }
-    return Peer.peers[id];
+    return Peer.peers[clientId];
   };
-
   peers.getAllPeers = function (liveOnly) {
     var result = [];
     util.forEachAttr(Peer.peers, function (peer) {
@@ -486,27 +447,25 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
     });
     return result;
   };
-
   function checkActivity() {
     var ps = peers.getAllPeers();
     var now = Date.now();
     ps.forEach(function (p) {
       if (p.idle == "active" && now - p.lastMessageDate > IDLE_TIME) {
-        p.update({idle: "inactive"});
+        p.update({
+          idle: "inactive"
+        });
       }
       if (p.status != "bye" && now - p.lastMessageDate > BYE_TIME) {
         p.bye();
       }
     });
   }
-
   session.hub.on("bye", function (msg) {
     var peer = peers.getPeer(msg.clientId);
     peer.bye();
   });
-
   var checkActivityTask = null;
-
   session.on("start", function () {
     if (checkActivityTask) {
       console.warn("Old peers checkActivityTask left over?");
@@ -514,7 +473,6 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
     }
     checkActivityTask = setInterval(checkActivity, CHECK_ACTIVITY_INTERVAL);
   });
-
   session.on("close", function () {
     util.forEachAttr(Peer.peers, function (peer) {
       peer.destroy();
@@ -523,47 +481,47 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
     clearTimeout(checkActivityTask);
     checkActivityTask = null;
   });
-
   var tabIdleTimeout = null;
-
   session.on("visibility-change", function (hidden) {
     if (hidden) {
       if (tabIdleTimeout) {
         clearTimeout(tabIdleTimeout);
       }
       tabIdleTimeout = setTimeout(function () {
-        peers.Self.update({idle: "inactive"});
+        peers.Self.update({
+          idle: "inactive"
+        });
       }, TAB_IDLE_TIME);
     } else {
       if (tabIdleTimeout) {
         clearTimeout(tabIdleTimeout);
       }
       if (peers.Self.idle == "inactive") {
-        peers.Self.update({idle: "active"});
+        peers.Self.update({
+          idle: "active"
+        });
       }
     }
   });
-
   session.hub.on("idle-status", function (msg) {
-    msg.peer.update({idle: msg.idle});
+    msg.peer.update({
+      idle: msg.idle
+    });
   });
-
   // Pings are a straight alive check, and contain no more information:
   session.hub.on("ping", function () {
-    session.send({type: "ping-back"});
+    session.send({
+      type: "ping-back"
+    });
   });
-
   window.addEventListener("pagehide", function () {
     // FIXME: not certain if this should be tab local or not:
     storeSerialization();
   }, false);
-
   function storeSerialization() {
     storage.tab.set("peerCache", serialize());
   }
-
   util.mixinEvents(peers);
-
   util.testExpose({
     setIdleTime: function (time) {
       IDLE_TIME = time;
@@ -574,7 +532,6 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
       }
     }
   });
-
   util.testExpose({
     setByeTime: function (time) {
       BYE_TIME = time;
@@ -585,6 +542,5 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
       }
     }
   });
-
   return peers;
 });

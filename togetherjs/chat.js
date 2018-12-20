@@ -70,7 +70,7 @@ define(["require", "jquery", "util", "session", "ui", "templates", "playback", "
     },
 
     command_test: function (args) {
-      if (! Walkabout) {
+      if (!Walkabout) {
         require(["walkabout"], (function (WalkaboutModule) {
           Walkabout = WalkaboutModule;
           this.command_test(args);
@@ -78,7 +78,7 @@ define(["require", "jquery", "util", "session", "ui", "templates", "playback", "
         return;
       }
       args = util.trim(args || "").split(/\s+/g);
-      if (args[0] === "" || ! args.length) {
+      if (args[0] === "" || !args.length) {
         if (this._testCancel) {
           args = ["cancel"];
         } else {
@@ -95,7 +95,7 @@ define(["require", "jquery", "util", "session", "ui", "templates", "playback", "
       }
       if (args[0] == "start") {
         var times = parseInt(args[1], 10);
-        if (isNaN(times) || ! times) {
+        if (isNaN(times) || !times) {
           times = 100;
         }
         ui.chat.system({
@@ -179,14 +179,7 @@ define(["require", "jquery", "util", "session", "ui", "templates", "playback", "
       }
     },
 
-    command_record: function () {
-      ui.chat.system({
-        text: "When you see the robot appear, the recording will have started"
-      });
-      window.open(
-        session.recordUrl(), "_blank",
-        "left,width=" + ($(window).width() / 2));
-    },
+
 
     playing: null,
 
@@ -200,7 +193,7 @@ define(["require", "jquery", "util", "session", "ui", "templates", "playback", "
         });
         return;
       }
-      if (! url) {
+      if (!url) {
         ui.chat.system({
           text: "Nothing is playing"
         });
@@ -209,7 +202,7 @@ define(["require", "jquery", "util", "session", "ui", "templates", "playback", "
       var logLoader = playback.getLogs(url);
       logLoader.then(
         (function (logs) {
-          if (! logs) {
+          if (!logs) {
             ui.chat.system({
               text: "No logs found."
             });
@@ -233,6 +226,7 @@ define(["require", "jquery", "util", "session", "ui", "templates", "playback", "
         forClient: session.clientId,
         saveAs: name
       });
+
       function save(msg) {
         if (msg.request.forClient == session.clientId && msg.request.saveAs == name) {
           storage.set("recording." + name, msg.logs).then(function () {
@@ -247,7 +241,7 @@ define(["require", "jquery", "util", "session", "ui", "templates", "playback", "
     },
 
     command_baseurl: function (url) {
-      if (! url) {
+      if (!url) {
         storage.get("baseUrlOverride").then(function (b) {
           if (b) {
             ui.chat.system({
@@ -276,7 +270,7 @@ define(["require", "jquery", "util", "session", "ui", "templates", "playback", "
     },
 
     command_config: function (variable, value) {
-      if (! (variable || value)) {
+      if (!(variable || value)) {
         storage.get("configOverride").then(function (c) {
           if (c) {
             util.forEachAttr(c, function (value, attr) {
@@ -306,7 +300,7 @@ define(["require", "jquery", "util", "session", "ui", "templates", "playback", "
         return;
       }
       console.log("config", [variable, value]);
-      if (! (variable && value)) {
+      if (!(variable && value)) {
         ui.chat.system({
           text: "Error: must provide /config VAR VALUE"
         });
@@ -320,7 +314,7 @@ define(["require", "jquery", "util", "session", "ui", "templates", "playback", "
         });
         return;
       }
-      if (! TogetherJS._defaultConfiguration.hasOwnProperty(variable)) {
+      if (!TogetherJS._defaultConfiguration.hasOwnProperty(variable)) {
         ui.chat.system({
           text: "Warning: variable " + variable + " is unknown"
         });
@@ -369,7 +363,7 @@ define(["require", "jquery", "util", "session", "ui", "templates", "playback", "
 
   session.once("ui-ready", function () {
     loadChatLog().then(function (log) {
-      if (! log) {
+      if (!log) {
         return;
       }
       for (var i = 0; i < log.length; i++) {
@@ -389,10 +383,21 @@ define(["require", "jquery", "util", "session", "ui", "templates", "playback", "
     });
   });
   //delete chat log
-  session.on("close", function(){
+  session.on("close", function () {
     storage.tab.set(chatStorageKey, undefined);
   });
 
   return chat;
 
 });
+
+/* 无用的方法
+command_record: function () {
+ui.chat.system({
+  text: "When you see the robot appear, the recording will have started"
+});
+window.open(
+  session.recordUrl(), "_blank",
+  "left,width=" + ($(window).width() / 2));
+},
+*/
