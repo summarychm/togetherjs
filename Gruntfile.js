@@ -135,25 +135,25 @@ module.exports = function (grunt) {
     watch: {
       main: {
         files: ["togetherjs/**/*", "Gruntfile.js"],
-        tasks: ["build"],
+        tasks: ["devbuild"],
         options: {
           nospawn: true
         }
       },
-      site: {
-        files: ["togetherjs/**/*", "Gruntfile.js", "site/**/*", "!**/*_flymake*", "!**/*~", "!**/.*"],
-        tasks: ["build", "buildsite"]
-      },
-      // FIXME: I thought I wouldn't have to watch for
-      // togetherjs/**/*.js, but because the hard links are regularly
-      // broken by git, this needs to be run often, and it's easy to
-      // forget.  Then between git action the build will be over-run,
-      // but that's harmless.
-      minimal: {
-        files: ["togetherjs/**/*.less", "togetherjs/togetherjs.js", "togetherjs/templates-localized.js", 
-                "togetherjs/**/*.html", "togetherjs/**/*.js", "!**/*_flymake*", "togetherjs/locales/**/*.json"],
-        tasks: ["build"]
-      }
+      // site: {
+      //   files: ["togetherjs/**/*", "Gruntfile.js", "site/**/*", "!**/*_flymake*", "!**/*~", "!**/.*"],
+      //   tasks: ["build", "buildsite"]
+      // },
+      // // FIXME: I thought I wouldn't have to watch for
+      // // togetherjs/**/*.js, but because the hard links are regularly
+      // // broken by git, this needs to be run often, and it's easy to
+      // // forget.  Then between git action the build will be over-run,
+      // // but that's harmless.
+      // minimal: {
+      //   files: ["togetherjs/**/*.less", "togetherjs/togetherjs.js", "togetherjs/templates-localized.js", 
+      //           "togetherjs/**/*.html", "togetherjs/**/*.js", "!**/*_flymake*", "togetherjs/locales/**/*.json"],
+      //   tasks: ["build"]
+      // }
     },
 
     'http-server': {
@@ -237,6 +237,7 @@ module.exports = function (grunt) {
   });
 
   grunt.registerTask("build", ["copylib", "maybeless", "substitute", "config-requirejs"]);
+  grunt.registerTask("devbuild", ["substitute", "config-requirejs"]);// "copylib", "maybeless", 
   grunt.registerTask("buildsite", ["copysite", "render", "rendermd", "docco"]);
   grunt.registerTask("devwatch", ["build", "watch:minimal"]);
   // For some reason doing ["build", "buildsite", "watch:site"]
@@ -648,7 +649,7 @@ module.exports = function (grunt) {
 
   grunt.registerTask('dev', function() {
     grunt.util.spawn({
-      cmd: 'node',
+      cmd: 'nodemon',
       args: ['devserver.js']
     });
     grunt.task.run('watch');

@@ -47,11 +47,9 @@
     "npm": "^2.11.3"
   },
   "scripts": {
-    "build": "grunt build buildsite --no-hardlink",
-    "start": "cd build && hs -c 0 -p 3000 -o --cors",
-    "watch": "grunt watch",
     "server": "nodemon --inspect hub/server.js",
-    "test": "grunt test",
-    "dev": "grunt devwatch"
+    "dev": "grunt dev",
+    "build": "grunt build buildsite --no-hardlink",
+    "test": "grunt test"
   }
 }

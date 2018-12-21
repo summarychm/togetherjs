@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 /*jshint scripturl:true */
-// 未压缩模式,采用require方式整合
+// 未压缩模式,采用require方式整合 
 // min模式,将所有code 都压缩的一个js文件中
 (function () {
   var styleSheet = "/togetherjs/togetherjs.css";
@@ -37,7 +37,7 @@
     hub_on: {}, // Hub events to bind to
     findRoom: null, //room配置,字符串或对象(prefix,max)
     autoStart: false, // 是否自动启动
-    suppressJoinConfirmation: false, // 是否启动join提示
+    suppressJoinConfirmation: false, // 显示是否加入room提示
     suppressInvite: false, //是否弹出邀请窗口
     inviteFromRoom: null, //邀请同房间的其他人
     storagePrefix: "togetherjs", // 本地存储时的前缀
@@ -55,12 +55,13 @@
     } catch (e) {
       configOverride = null;
     }
-    if ((!configOverride) || configOverride.expiresAt < Date.now()) {
+    if (!configOverride || configOverride.expiresAt < Date.now()) {
       localStorage.removeItem("togetherjs.configOverride");
     } else {
       for (var attr in configOverride) {
         if (!configOverride.hasOwnProperty(attr)) continue;
-        if (attr == "expiresAt" || !configOverride.hasOwnProperty(attr)) continue;
+        if (attr == "expiresAt" || !configOverride.hasOwnProperty(attr))
+          continue;
         window["TogetherJSConfig_" + attr] = configOverride[attr];
         console.log("Config override:", attr, "=", configOverride[attr]);
       }
@@ -80,10 +81,9 @@
     } catch (e) {
       baseUrlOverride = null;
     }
-    if ((!baseUrlOverride) || baseUrlOverride.expiresAt < Date.now())
+    if (!baseUrlOverride || baseUrlOverride.expiresAt < Date.now())
       localStorage.removeItem("togetherjs.baseUrlOverride");
-    else
-      baseUrl = baseUrlOverride.baseUrl;
+    else baseUrl = baseUrlOverride.baseUrl;
   }
   if (!baseUrl) {
     var scripts = document.getElementsByTagName("script");
@@ -101,7 +101,9 @@
     }
   }
   if (!baseUrl) {
-    console.warn("Could not determine TogetherJS's baseUrl (looked for a <script> with togetherjs.js and togetherjs-min.js)");
+    console.warn(
+      "Could not determine TogetherJS's baseUrl (looked for a <script> with togetherjs.js and togetherjs-min.js)"
+    );
   }
   var defaultHubBase = "https://hub.togetherjs.mozillalabs.com";
   defaultConfiguration.hubBase = defaultHubBase;
@@ -119,8 +121,7 @@
       if (event && typeof event == "object") {
         if (event.target && typeof event)
           TogetherJS.startup.button = event.target;
-        else if (event.nodeType == 1)
-          TogetherJS.startup.button = event;
+        else if (event.nodeType == 1) TogetherJS.startup.button = event;
         else if (event[0] && event[0].nodeType == 1)
           TogetherJS.startup.button = event[0]; //jq
       }
@@ -128,7 +129,7 @@
       console.warn("Error determining starting button:", e);
     }
     //******** 确定启动together的DOM end ********/
-    if (window.TogetherJSConfig && (!window.TogetherJSConfig.loaded)) {
+    if (window.TogetherJSConfig && !window.TogetherJSConfig.loaded) {
       TogetherJS.config(window.TogetherJSConfig); // 读取并应用配置文件
       window.TogetherJSConfig.loaded = true;
     }
@@ -137,36 +138,38 @@
     var attrName;
     var globalOns = {}; // 存放systemEvent集合
     for (attr in window) {
-      if (attr.indexOf("TogetherJSConfig_on_") === 0) { //先检测事件
-        attrName = attr.substr(("TogetherJSConfig_on_").length);
+      if (attr.indexOf("TogetherJSConfig_on_") === 0) {
+        //先检测事件
+        attrName = attr.substr("TogetherJSConfig_on_".length);
         globalOns[attrName] = window[attr];
-      } else if (attr.indexOf("TogetherJSConfig_") === 0) { // 再检测属性
-        attrName = attr.substr(("TogetherJSConfig_").length);
+      } else if (attr.indexOf("TogetherJSConfig_") === 0) {
+        // 再检测属性
+        attrName = attr.substr("TogetherJSConfig_".length);
         TogetherJS.config(attrName, window[attr]);
       }
     }
     var ons = TogetherJS.config.get("on"); //更新config中的 onEvent
-    for (attr in globalOns)
-      ons[attr] = globalOns[attr];
+    for (attr in globalOns) ons[attr] = globalOns[attr];
     TogetherJS.config("on", ons); //更新配置
-    for (attr in ons)
-      TogetherJS.on(attr, ons[attr]); //绑定事件
+    for (attr in ons) TogetherJS.on(attr, ons[attr]); //绑定事件
     var hubOns = TogetherJS.config.get("hub_on"); //更新config中的 hubOn
     if (hubOns) {
       for (attr in hubOns) {
-        if (hubOns.hasOwnProperty(attr))
-          TogetherJS.hub.on(attr, hubOns[attr]);
+        if (hubOns.hasOwnProperty(attr)) TogetherJS.hub.on(attr, hubOns[attr]);
       }
     }
     /******** on 和 hub_on事件绑定 end ********/
-    if (!TogetherJS.config.close('cacheBust')) { // 判断hash
-      cacheBust = '';
+    if (!TogetherJS.config.close("cacheBust")) {
+      // 判断hash
+      cacheBust = "";
       delete TogetherJS.requireConfig.urlArgs;
     }
-    if (!TogetherJS.startup.reason) // 设置启动类型
+    if (!TogetherJS.startup.reason)
+      // 设置启动类型
       TogetherJS.startup.reason = "started";
     /*****************************************************************************************/
-    if (TogetherJS._loaded) { //_loaded属性为真(延迟执行)就直接启动,并停止继续执行
+    if (TogetherJS._loaded) {
+      //_loaded属性为真(延迟执行)就直接启动,并停止继续执行
       session = TogetherJS.require("session");
       addStyle();
       return session.start();
@@ -177,15 +180,14 @@
     addStyle();
     var minSetting = TogetherJS.config.get("useMinimizedCode");
     TogetherJS.config.close("useMinimizedCode");
-    if (minSetting !== undefined)
-      min = !!minSetting;
+    if (minSetting !== undefined) min = !!minSetting;
     var requireConfig = TogetherJS._extend(TogetherJS.requireConfig);
     var deps = ["session", "jquery"];
     var lang = TogetherJS.getConfig("lang");
     // [igoryen]: We should generate this value in Gruntfile.js, based on the available translations
     var availableTranslations = {
       "en-US": true,
-      "en": "en-US",
+      en: "en-US"
       // "es": "es-BO",
       // "es-BO": true,
       // "ru": true,
@@ -193,49 +195,52 @@
       // "pl": "pl-PL",
       // "pl-PL": true
     };
-    if (lang === undefined)
-      lang = navigator.language.replace(/_/g, "-");
+    if (lang === undefined) lang = navigator.language.replace(/_/g, "-");
     if (/-/.test(lang) && !availableTranslations[lang])
-      lang = lang.replace(/-.*$/, '');
-    if (!availableTranslations[lang])
-      lang = availableTranslations["en-US"];
+      lang = lang.replace(/-.*$/, "");
+    if (!availableTranslations[lang]) lang = availableTranslations["en-US"];
     TogetherJS.config("lang", lang);
     var localeTemplates = "templates-" + lang;
     deps.splice(0, 0, localeTemplates); //加入模板文件
     if (!min) {
       if (typeof require == "function") {
         if (!require.config) {
-          console.warn("The global require (", require, ") is not requirejs; please use togetherjs-min.js");
+          console.warn(
+            "The global require (",
+            require,
+            ") is not requirejs; please use togetherjs-min.js"
+          );
           throw new Error("Conflict with window.require");
         }
         TogetherJS.require = require.config(requireConfig);
       }
     }
+
     function callback(session, jquery) {
       TogetherJS._loaded = true;
       if (!min) {
-        TogetherJS.require = require.config({ //包装require
+        TogetherJS.require = require.config({
+          //包装require
           context: "togetherjs"
         });
         TogetherJS._requireObject = require;
       }
     }
     if (typeof TogetherJS.require == "function")
-      TogetherJS.require(deps, callback); //自定义的require
+      TogetherJS.require(deps, callback);
+    //自定义的require
     else {
       requireConfig.deps = deps;
       requireConfig.callback = callback;
-      if (!min)
-        window.require = requireConfig;
+      if (!min) window.require = requireConfig;
     }
-    if (min)
-      addScript("/togetherjs/togetherjsPackage.js");
-    else
-      addScript("/togetherjs/libs/require.js");
+    if (min) addScript("/togetherjs/togetherjsPackage.js");
+    else addScript("/togetherjs/libs/require.js");
   };
   /******** TogetherJ主体类 end ********/
   /******** tool begin ********/
-  TogetherJS._extend = function (base, extensions) { // 给对象扩展属性/方法
+  TogetherJS._extend = function (base, extensions) {
+    // 给对象扩展属性/方法
     if (!extensions) {
       extensions = base;
       base = {};
@@ -247,10 +252,19 @@
     }
     return base;
   };
-  TogetherJS._mixinEvents = function (proto) { //给对象添加EventListener
+  TogetherJS._mixinEvents = function (proto) {
+    //给对象添加EventListener
     proto.on = function on(name, callback) {
       if (typeof callback != "function") {
-        console.warn("Bad callback for", this, ".once(", name, ", ", callback, ")");
+        console.warn(
+          "Bad callback for",
+          this,
+          ".once(",
+          name,
+          ", ",
+          callback,
+          ")"
+        );
         throw "Error: .once() called with non-callback";
       }
       if (name.search(" ") != -1) {
@@ -266,9 +280,7 @@
           thisString = thisString.substr(0, 20) + "...";
         }
         console.warn(thisString + ".on('" + name + "', ...): unknown event");
-        if (console.trace) {
-          console.trace();
-        }
+        if (console.trace) console.trace();
       }
       if (!this._listeners) {
         this._listeners = {};
@@ -282,7 +294,15 @@
     };
     proto.once = function once(name, callback) {
       if (typeof callback != "function") {
-        console.warn("Bad callback for", this, ".once(", name, ", ", callback, ")");
+        console.warn(
+          "Bad callback for",
+          this,
+          ".once(",
+          name,
+          ", ",
+          callback,
+          ")"
+        );
         throw "Error: .once() called with non-callback";
       }
       var attr = "onceCallback_" + name;
@@ -297,40 +317,31 @@
       this.on(name, callback[attr]);
     };
     proto.off = proto.removeListener = function off(name, callback) {
-      if (this._listenerOffs) {
-        // Defer the .off() call until the .emit() is done.
-        this._listenerOffs.push([name, callback]);
-        return;
-      }
-      if (name.search(" ") != -1) {
+      // 删除指定的socket监听,批量删除,name用" "分割.
+      // Defer the .off() call until the .emit() is done.
+      if (this._listenerOffs) return this._listenerOffs.push([name, callback]);
+      if (name.search(" ") != -1) { //支持批量关闭"/"
         var names = name.split(/ +/g);
-        names.forEach(function (n) {
-          this.off(n, callback);
-        }, this);
-        return;
+        return names.forEach(n => {
+          this.off(n, callback); //递归自身进行off操作
+        });
       }
-      if ((!this._listeners) || !this._listeners[name]) {
-        return;
-      }
-      var l = this._listeners[name],
-        _len = l.length;
-      for (var i = 0; i < _len; i++) {
-        if (l[i] == callback) {
-          l.splice(i, 1);
-          break;
-        }
-      }
+      if (!this._listeners || !this._listeners[name])
+        return; //_listeners为空或_listeners[name]为空,return
+      this._listeners[name] = this._listeners[name].filter( //删除指定事件
+        fn => fn != callback
+      );
     };
     proto.emit = function emit(name) {
-      var offs = this._listenerOffs = [];
-      if (!this._listeners || !this._listeners[name]) // 没有注册事件,直接返回
-        return;
+      //将待清除事件集合缓存到offs变量上,遍历listeners时有可能会操作_listenerOffs集合
+      var offs = this._listenerOffs = []; 
+      if (!this._listeners || !this._listeners[name])
+        return; // 没有注册事件,直接返回
       var args = Array.prototype.slice.call(arguments, 1);
-      this._listeners[name].forEach(function (callback) {
-        callback.apply(this, args);
-      }, this);
+      this._listeners[name].forEach(callback => {
+        callback.apply(this, args); //依次触发绑定的回调函数
+      });
       delete this._listenerOffs;
-      // TODO: offs=this._listenerOffs,既然this._listenerOffs已经被delete,那下面还会执行?
       if (offs.length) {
         offs.forEach(function (item) {
           this.off(item[0], item[1]);
@@ -339,7 +350,8 @@
     };
     return proto;
   };
-  TogetherJS._teardown = function () { // 卸载模块的方法
+  TogetherJS._teardown = function () {
+    // 卸载模块的方法
     var requireObject = TogetherJS._requireObject || window.require;
     // FIXME: this doesn't clear the context for min-case
     if (requireObject.s && requireObject.s.contexts) {
@@ -378,7 +390,8 @@
       whrandom: "libs/whrandom/random"
     }
   };
-  TogetherJS._startupInit = { //每部启动会话元素的初始化配置
+  TogetherJS._startupInit = {
+    //每部启动会话元素的初始化配置
     button: null, // 启动会话的元素
     reason: null, // 链接方式(started全新会话,joined继续会话)
     continued: false, //页面加载后,Together已经运行.
@@ -392,23 +405,37 @@
   // *  TogetherJS.config(configurationObject)
   // *  TogetherJS.config(configName, value)
   // *  window.TogetherJSConfig在togetherJS启动前
-  TogetherJS.config = function (name, val) { // 设置config,支持字符和对象2种形式
+  TogetherJS.config = function (name, val) {
+    // 设置config,支持字符和对象2种形式
     var settings, i, tracker, attr;
     if (arguments.length == 1) {
       if (typeof name != "object")
-        throw new Error('TogetherJS.config(value) must have an object value (not: ' + name + ')');
+        throw new Error(
+          "TogetherJS.config(value) must have an object value (not: " +
+          name +
+          ")"
+        );
       settings = name; //对象形式
     } else {
       settings = {};
       settings[name] = val;
     }
-    for (attr in settings) { // 进行赋值
-      if (TogetherJS._configClosed[attr] && TogetherJS.running) //被冻结的属性
-        throw new Error("The configuration " + attr + " is finalized and cannot be changed");
-      if (attr == "loaded" || attr == "callToStart") //不支持修改loaded/callToStart两属性
+    for (attr in settings) {
+      // 进行赋值
+      if (TogetherJS._configClosed[attr] && TogetherJS.running)
+        //被冻结的属性
+        throw new Error(
+          "The configuration " + attr + " is finalized and cannot be changed"
+        );
+      if (attr == "loaded" || attr == "callToStart")
+        //不支持修改loaded/callToStart两属性
         continue;
-      if (!TogetherJS._defaultConfiguration.hasOwnProperty(attr)) //不认识的属性
-        console.warn("Unknown configuration value passed to TogetherJS.config():", attr);
+      if (!TogetherJS._defaultConfiguration.hasOwnProperty(attr))
+        //不认识的属性
+        console.warn(
+          "Unknown configuration value passed to TogetherJS.config():",
+          attr
+        );
       var previous = TogetherJS._configuration[attr];
       var value = settings[attr];
       TogetherJS._configuration[attr] = value; // 设置值
@@ -419,7 +446,16 @@
         try {
           tracker(value, previous);
         } catch (e) {
-          console.warn("Error setting configuration", name, "to", value, ":", e, "; reverting to", previous);
+          console.warn(
+            "Error setting configuration",
+            name,
+            "to",
+            value,
+            ":",
+            e,
+            "; reverting to",
+            previous
+          );
           failed = true;
           return failed;
         }
@@ -431,15 +467,23 @@
             tracker = trackers[i];
             tracker(value);
           } catch (e) {
-            console.warn("Error REsetting configuration", name, "to", previous,
-              ":", e, "(ignoring)");
+            console.warn(
+              "Error REsetting configuration",
+              name,
+              "to",
+              previous,
+              ":",
+              e,
+              "(ignoring)"
+            );
           }
         }
       }
       /******** track previous end ********/
     }
   };
-  TogetherJS.config.get = TogetherJS.getConfig = function (name) { //获取配置信息
+  TogetherJS.config.get = TogetherJS.getConfig = function (name) {
+    //获取配置信息
     var value = TogetherJS._configuration[name];
     if (value === undefined) {
       if (!TogetherJS._defaultConfiguration.hasOwnProperty(name))
@@ -448,7 +492,8 @@
     }
     return value;
   };
-  TogetherJS.config.track = function (name, callback) { // track,用于订阅config变化的函数
+  TogetherJS.config.track = function (name, callback) {
+    // track,用于订阅config变化的函数
     if (!TogetherJS._defaultConfiguration.hasOwnProperty(name))
       throw new Error("Configuration is unknown: " + name);
     callback(TogetherJS.config.get(name));
@@ -457,14 +502,16 @@
     TogetherJS._configTrackers[name].push(callback);
     return callback;
   };
-  TogetherJS.config.close = function (name) { //冻结并返回指定值
+  TogetherJS.config.close = function (name) {
+    //冻结并返回指定值
     if (!TogetherJS._defaultConfiguration.hasOwnProperty(name)) {
       throw new Error("Configuration is unknown: " + name);
     }
     TogetherJS._configClosed[name] = true;
     return this.get(name);
   };
-  TogetherJS.reinitialize = function () { //重新启动
+  TogetherJS.reinitialize = function () {
+    //重新启动
     // 如果未设置,说明TogetherJS has been not loaded,不需要重新加载
     if (TogetherJS.running && typeof TogetherJS.require == "function") {
       TogetherJS.require(["session"], function (session) {
@@ -472,23 +519,27 @@
       });
     }
   };
-  TogetherJS.refreshUserData = function () { // 刷新用户数据,emit
+  TogetherJS.refreshUserData = function () {
+    // 刷新用户数据,emit
     if (TogetherJS.running && typeof TogetherJS.require == "function") {
       TogetherJS.require(["session"], function (session) {
         session.emit("refresh-user-data");
       });
     }
   };
-  TogetherJS._onmessage = function (msg) { // 处理接收到的socket信息
+  TogetherJS._onmessage = function (msg) {
+    // 处理接收到的socket信息
     var type = msg.type;
-    if (type.search(/^app\./) === 0) //hub 事件
+    if (type.search(/^app\./) === 0)
+      //hub 事件
       type = type.substr("app.".length);
-    else // system事件
-      type = "togetherjs." + type;
+    // system事件
+    else type = "togetherjs." + type;
     msg.type = type;
     TogetherJS.hub.emit(msg.type, msg); //通过hub.emit触发事件
   };
-  TogetherJS.send = function (msg) { // 发送socket事件(开发者使用)
+  TogetherJS.send = function (msg) {
+    // 发送socket事件(开发者使用)
     if (!TogetherJS.require)
       throw "You cannot use TogetherJS.send() when TogetherJS is not running";
     TogetherJS.require(["session"], function (session) {
@@ -503,18 +554,23 @@
   // 没有用到的方法
   TogetherJS.checkForUsersOnChannel = function (address, callback) {
     if (address.search(/^https?:/i) === 0) {
-      address = address.replace(/^http/i, 'ws');
+      address = address.replace(/^http/i, "ws");
     }
     var socket = new WebSocket(address);
     var gotAnswer = false;
     socket.onmessage = function (event) {
       var msg = JSON.parse(event.data);
       if (msg.type != "init-connection") {
-        console.warn("Got unexpected first message (should be init-connection):", msg);
+        console.warn(
+          "Got unexpected first message (should be init-connection):",
+          msg
+        );
         return;
       }
       if (gotAnswer) {
-        console.warn("Somehow received two responses from channel; ignoring second");
+        console.warn(
+          "Somehow received two responses from channel; ignoring second"
+        );
         socket.close();
         return;
       }
@@ -532,30 +588,37 @@
   };
   var hash = location.hash.replace(/^#/, "");
   var room = /&?togetherjs=([^&]*)/.exec(hash); //room
-  if (room) { // 加入到room
+  if (room) {
+    // 加入到room
     TogetherJS.startup._joinShareId = room[1];
     TogetherJS.startup.reason = "joined";
-    var newHash = hash.substr(0, room.index) + hash.substr(room.index + room[0].length);
+    var newHash =
+      hash.substr(0, room.index) + hash.substr(room.index + room[0].length);
     location.hash = newHash; // 更新为去除掉room后的hash
   }
   if (window._TogetherJSShareId) {
     TogetherJS.startup._joinShareId = window._TogetherJSShareId;
     delete window._TogetherJSShareId;
   }
-  function conditionalActivate() { // 页面加载(支持自动/延时加载,TogetherJSConfig_callToStart)
+
+  function conditionalActivate() {
+    // 页面加载(支持自动/延时加载,TogetherJSConfig_callToStart)
     if (window.TogetherJSConfig_noAutoStart) return;
     var callToStart = window.TogetherJSConfig_callToStart;
     if (window.TogetherJSConfig && window.TogetherJSConfig.callToStart)
       callToStart = window.TogetherJSConfig.callToStart;
-    if (callToStart) // 将初始化方法传入回调事件中
+    if (callToStart)
+      // 将初始化方法传入回调事件中
       callToStart(onload);
-    else
-      onload();
+    else onload();
   }
+
   function onload() {
-    if (TogetherJS.startup._joinShareId) // 方式1: joined room
+    if (TogetherJS.startup._joinShareId)
+      // 方式1: joined room
       TogetherJS();
-    else if (window._TogetherJSBookmarklet) { //方式2: 书签功能载入(基本不用)
+    else if (window._TogetherJSBookmarklet) {
+      //方式2: 书签功能载入(基本不用)
       delete window._TogetherJSBookmarklet;
       TogetherJS();
     } else {
@@ -563,13 +626,16 @@
       var value = sessionStorage.getItem(key);
       if (value) {
         value = JSON.parse(value);
-        if (value && value.running) { //方式3: sessionStorage 如果running,则continue
+        if (value && value.running) {
+          //方式3: sessionStorage 如果running,则continue
           TogetherJS.startup.continued = true;
           TogetherJS.startup.reason = value.startupReason;
           TogetherJS();
         }
-      } else if (window.TogetherJSConfig_autoStart ||
-        (window.TogetherJSConfig && window.TogetherJSConfig.autoStart)) {
+      } else if (
+        window.TogetherJSConfig_autoStart ||
+        (window.TogetherJSConfig && window.TogetherJSConfig.autoStart)
+      ) {
         TogetherJS.startup.reason = "joined"; //方式4: 自动启动
         TogetherJS();
       }
@@ -582,15 +648,15 @@
       var link = document.createElement("link");
       link.id = "togetherjs-stylesheet";
       link.setAttribute("rel", "stylesheet");
-      link.href = baseUrl + styleSheet +
-        (cacheBust ? ("?bust=" + cacheBust) : '');
+      link.href =
+        baseUrl + styleSheet + (cacheBust ? "?bust=" + cacheBust : "");
       document.head.appendChild(link);
     }
   }
+
   function addScript(url) {
     var script = document.createElement("script");
-    script.src = baseUrl + url +
-      (cacheBust ? ("?bust=" + cacheBust) : '');
+    script.src = baseUrl + url + (cacheBust ? "?bust=" + cacheBust : "");
     document.head.appendChild(script);
   }
 })();

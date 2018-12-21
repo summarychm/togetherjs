@@ -45,6 +45,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
     other.hide();
     el.show();
   };
+
   function panelPosition() {
     var iface = $("#togetherjs-dock");
     if (iface.hasClass("togetherjs-dock-right")) {
@@ -61,6 +62,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
   // This is used for some signalling when ui.prepareUI and/or
   // ui.activateUI is called before the DOM is fully loaded:
   var deferringPrepareUI = null;
+
   function deferForContainer(func) {
     /* Defers any calls to func() until after ui.container is set
        Function cannot have a return value (as sometimes the call will
@@ -79,15 +81,14 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
     };
   }
   ui.prepareUI = function () { // 页面加载完毕前的回调函数
-    if (!(document.readyState == "complete" || document.readyState == "interactive")) {
-      // Too soon!  Wait a sec...
-      deferringPrepareUI = "deferring";
+    if (!["complete", "interactive"].includes(document.readyState)) {
+      deferringPrepareUI = "deferring"; // 加载的太快了,稍后再试,绑定DOMLoad事件继续调用ui.prepareUI()事件.
       document.addEventListener("DOMContentLoaded", function () {
         var d = deferringPrepareUI;
         deferringPrepareUI = null;
         ui.prepareUI();
         // This happens when ui.activateUI is called before the document has been loaded:
-        if (d == "activate")
+        if (d == "activate") // 页面准备就绪
           ui.activateUI();
       });
       return;
@@ -166,20 +167,15 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       }
     });
   };
-  // After prepareUI, this actually makes the interface live.  We have
-  // to do this later because we call prepareUI when many components
-  // aren't initialized, so we don't even want the user to be able to
-  // interact with the interface.  But activateUI is called once
-  // everything is loaded and ready for interaction.
-  ui.activateUI = function () {
+  // After prepareUI, this actually makes the interface live.  We have to do this later because we call prepareUI when many components aren't initialized, so we don't even want the user to be able to interact with the interface.  But activateUI is called once everything is loaded and ready for interaction.
+  ui.activateUI = function () { // UI准备就绪的回调
     if (deferringPrepareUI) {
       console.warn("ui.activateUI called before document is ready; waiting...");
       deferringPrepareUI = "activate";
       return;
     }
-    if (!ui.container) {
+    if (!ui.container)
       ui.prepareUI();
-    }
     var container = ui.container;
     //create the overlay
     if ($.browser.mobile) {
@@ -207,6 +203,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
         return false;
       }
     });
+
     function submitChat() {
       var val = input.val();
       if ($.trim(val)) {
@@ -253,9 +250,11 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       var iface = $("#togetherjs-dock");
       // FIXME: switch to .offset() and pageX/Y
       var startPos = panelPosition();
+
       function selectoff() {
         return false;
       }
+
       function mousemove(event2) {
         var fromRight = $window.width() + window.pageXOffset - event2.pageX;
         var fromLeft = event2.pageX - window.pageXOffset;
@@ -291,6 +290,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       });
       return false;
     });
+
     function openDock() {
       $('.togetherjs-window').animate({
         opacity: 1
@@ -331,6 +331,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       var src = "/togetherjs/images/togetherjs-logo-close.png";
       $("#togetherjs-dock-anchor #togetherjs-dock-anchor-horizontal img").attr("src", src);
     }
+
     function closeDock() {
       //enable vertical scrolling
       $("body").css({
@@ -589,6 +590,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       });
     });
   };
+
   function sizeDownImage(imageUrl) {
     return util.Deferred(function (def) {
       var $canvas = $("<canvas>");
@@ -610,6 +612,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       });
     });
   }
+
   function fixupAvatars(container) { // 设置固定头像
     /* All <div class="togetherjs-person" /> elements need an element inside,
        so we add that element here */
@@ -652,6 +655,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
     bindMenu();
     $(document).bind("click", maybeHideMenu);
   }
+
   function bindMenu() {
     var el = $("#togetherjs-menu:visible");
     if (el.length) {
@@ -663,6 +667,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       });
     }
   }
+
   function bindPicker() {
     var picker = $("#togetherjs-pick-color:visible");
     if (picker.length) {
@@ -678,6 +683,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
     bindMenu();
     bindPicker();
   });
+
   function toggleMenu() {
     if ($("#togetherjs-menu").is(":visible")) {
       hideMenu();
@@ -685,6 +691,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       showMenu();
     }
   }
+
   function hideMenu() {
     var el = $("#togetherjs-menu");
     el.hide();
@@ -692,6 +699,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
     ui.displayToggle("#togetherjs-self-name-display");
     $("#togetherjs-pick-color").hide();
   }
+
   function maybeHideMenu(event) {
     var t = event.target;
     while (t) {
@@ -703,6 +711,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
     }
     hideMenu();
   }
+
   function adjustDockSize(buttons) { // 显示或隐藏dock(1显示,-1隐藏)
     assert(typeof buttons == "number");
     assert(buttons && Math.floor(buttons) == buttons);
@@ -1209,12 +1218,10 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       $("html, body").easeTo(pos);
     },
     updateFollow: function () {
-      if (!this.peer.url) {
+      if (!this.peer.url)
         return;
-      }
-      if (!this.detailElement) {
+      if (!this.detailElement)
         return;
-      }
       var same = this.detailElement.find(".togetherjs-same-url");
       var different = this.detailElement.find(".togetherjs-different-url");
       if (this.peer.url == session.currentUrl()) {
@@ -1245,6 +1252,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       session.off("hide-window", this.maybeHideDetailWindow);
     }
   });
+
   function updateChatParticipantList() {
     var live = peers.getAllPeers(true);
     if (live.length) {
@@ -1257,12 +1265,14 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       ui.displayToggle("#togetherjs-chat-no-participants");
     }
   }
+
   function inviteHubUrl() {
     var base = TogetherJS.config.get("inviteFromRoom");
     assert(base);
     return util.makeUrlAbsolute(base, session.hubUrl());
   }
   var inRefresh = false;
+
   function refreshInvite() {
     if (inRefresh) {
       return;
@@ -1270,6 +1280,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
     inRefresh = true;
     require(["who"], function (who) {
       var def = who.getList(inviteHubUrl());
+
       function addUser(user, before) {
         var item = templating.sub("invite-user-item", {
           peer: user
@@ -1284,6 +1295,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
           invite(user.clientId);
         });
       }
+
       function refresh(users, finished) {
         var sorted = [];
         for (var id in users) {
@@ -1336,6 +1348,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       });
     });
   });
+
   function invite(clientId) {
     require(["who"], function (who) {
       // FIXME: use the return value of this to give a signal that

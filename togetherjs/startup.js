@@ -19,34 +19,29 @@ define(["util", "require", "jquery", "windowing", "storage"], function (util, re
     "browserUnsupported",
     "sessionIntro",
     "walkthrough",
-    // Look in the share() below if you add anything after here:
     "share"
   ];
   var currentStep = null;
   startup.start = function () {
-    if (!session) {
+    if (!session) { //保证session必须存在
       require(["session"], function (sessionModule) {
         session = sessionModule; // 加载session模块
         startup.start(); // 重新进入startup.start方法
       });
       return;
     }
-    STEPS.forEach(function (step) {
-      const current = handlers[step];
-      current && current(startup.start);
-    })
-    // var index = -1;
-    // if (currentStep)
-    //   index = STEPS.indexOf(currentStep);
-    // index++;
-    // if (index >= STEPS.length)
-    //   return session.emit("startup-ready");
-    // currentStep = STEPS[index];
-    // handlers[currentStep](startup.start);
+    var index = -1;
+    if (currentStep) //根据name查找index
+      index = STEPS.indexOf(currentStep);
+    index++;
+    if (index >= STEPS.length) //全部加载完毕,则触发"startup-ready"事件
+      return session.emit("startup-ready");
+    currentStep = STEPS[index];
+    handlers[currentStep](startup.start);
   };
   var handlers = {
-    browserBroken: function (next) {
-      if (window.WebSocket)
+    browserBroken: function (next) { //初始检测
+      if (window.WebSocket) //浏览器基础环境监测
         return next();
       windowing.show("#togetherjs-browser-broken", {
         onClose: function () {
@@ -56,10 +51,10 @@ define(["util", "require", "jquery", "windowing", "storage"], function (util, re
       if ($.browser.msie)
         $("#togetherjs-browser-broken-is-ie").show();
     },
-    browserUnsupported: function (next) {
+    browserUnsupported: function (next) { // 空
       next();
     },
-    sessionIntro: function (next) {
+    sessionIntro: function (next) { // 显示joinRoom提示
       if ((!session.isClient) || !session.firstRun)
         return next();
       TogetherJS.config.close("suppressJoinConfirmation");
@@ -79,7 +74,7 @@ define(["util", "require", "jquery", "windowing", "storage"], function (util, re
         session.close("declined-join");
       });
     },
-    walkthrough: function (next) {
+    walkthrough: function (next) {// 是否显示help
       storage.settings.get("seenIntroDialog").then(function (seenIntroDialog) {
         if (seenIntroDialog)
           return next();
