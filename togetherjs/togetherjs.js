@@ -11,12 +11,6 @@
   var version = "unknown";
   var cacheBust = Date.now() + "";
   var defaultConfiguration = {
-    // Enable Mozilla or Google analytics on the page when TogetherJS is activated:
-    // FIXME: these don't seem to be working, and probably should be removed in favor
-    // of the hub analytics
-    enableAnalytics: false,
-    // The code to enable (this is defaulting to a Mozilla code):
-    analyticsCode: "UA-35433268-28",
     // The siteName is used in the walkthrough (defaults to document.title):
     siteName: null,
     // The name of this tool as provided to users.  The UI is updated to use this.
@@ -334,7 +328,7 @@
     };
     proto.emit = function emit(name) {
       //将待清除事件集合缓存到offs变量上,遍历listeners时有可能会操作_listenerOffs集合
-      var offs = this._listenerOffs = []; 
+      var offs = this._listenerOffs = [];
       if (!this._listeners || !this._listeners[name])
         return; // 没有注册事件,直接返回
       var args = Array.prototype.slice.call(arguments, 1);

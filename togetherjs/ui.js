@@ -3,15 +3,15 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 define(["require", "jquery", "util", "session", "templates", "templating", "linkify", "peers", "windowing", "tinycolor", "elementFinder", "visibilityApi"], function (require, $, util, session, templates, templating, linkify, peers, windowing, tinycolor, elementFinder, visibilityApi) {
-  var ui = util.Module('ui');
   var assert = util.assert;
-  var AssertionError = util.AssertionError;
   var chat;
   var $window = $(window);
+  var ui = util.Module('ui'); //创建UI类实例
+  var AssertionError = util.AssertionError;
   // This is also in togetherjs.less, as @button-height:
   var BUTTON_HEIGHT = 60 + 1; // 60 is button height, 1 is border
   // chat TextArea
-  var TEXTAREA_LINE_HEIGHT = 20; // in pixels
+  var TEXTAREA_LINE_HEIGHT = 30; // 用户输入框默认高度
   var TEXTAREA_MAX_LINES = 5;
   // This is also in togetherjs.less, under .togetherjs-animated
   var ANIMATION_DURATION = 1000;
@@ -80,7 +80,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       });
     };
   }
-  ui.prepareUI = function () { // 页面加载完毕前的回调函数
+  ui.prepareUI = function () { // 页面加载toolbar的函数
     if (!["complete", "interactive"].includes(document.readyState)) {
       deferringPrepareUI = "deferring"; // 加载的太快了,稍后再试,绑定DOMLoad事件继续调用ui.prepareUI()事件.
       document.addEventListener("DOMContentLoaded", function () {

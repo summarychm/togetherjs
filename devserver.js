@@ -4,7 +4,6 @@ var
   path = require("path"),
   fs = require("fs"),
   port = process.argv[2] || process.env['PORT'] || 3000;
-
 http.createServer(function (request, response) {
   var uri = url.parse(request.url).pathname //域名后的路径名
   var filename = path.join(process.cwd(), 'build', uri); //对应的真实路径

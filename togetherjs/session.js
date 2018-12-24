@@ -11,13 +11,15 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
   var channel = null; // This is the channel to the hub:
   var localStoragePrefix = "togetherjs."; // This is the key we use for localStorage:
   var MAX_SESSION_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days
-  var session = util.mixinEvents(util.Module("session")); //创建一个session类
+
+  var session = util.mixinEvents(util.Module("session")); // 创建一个session类
   session.shareId = null; // roomId
   session.clientId = null; // 标识客户端的ID
-  session.router = channels.Router();
+  session.router = channels.Router(); //
   session.firstRun = false; // 是否是首次运行
   session.timeHelloSent = null;
   session.AVATAR_SIZE = 90; //头像宽高尺寸
+
   /******** url相关 begin ********/
   var includeHashInUrl = TogetherJS.config.get("includeHashInUrl"); // 是否开启强验证
   TogetherJS.config.close("includeHashInUrl"); // 冻结该属性
@@ -93,6 +95,7 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
   session.hub.on("who", function (msg) {
     sendHello(true);
   });
+
   function sendHello(helloBack) { // hello事件,true:hello,false:hello-back
     var msg = session.makeHelloMessage(helloBack); //获取包装后的hello信息
     if (!helloBack) {
@@ -101,6 +104,7 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
     }
     session.send(msg);
   }
+
   function processFirstHello(msg) { // 首次收到hello信息
     if (!msg.sameUrl) {
       var url = msg.url;
@@ -189,9 +193,11 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
     if (includeHashInUrl)
       $(window).off("hashchange", hashchangeEvent);
   });
+
   function hashchangeEvent() { // 发送hello-back事件,一般都是因为用户设置了url强检测
     sendHello(false);
   }
+
   function resizeEvent() {
     session.emit("resize");
   }
@@ -211,6 +217,7 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
         TogetherJS.startup.button = el;
     });
   }
+
   function initShareId() { //设置并获取ShareId
     return util.Deferred(function (def) {
       var hash = location.hash;
@@ -310,6 +317,7 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
       });
     });
   }
+
   function getRoomName(prefix, maxSize) { //生成roomId
     var findRoom = TogetherJS.config.get("hubBase").replace(/\/*$/, "") + "/findroom";
     return $.ajax({
@@ -323,6 +331,7 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
       return resp.name;
     });
   }
+
   function openChannel() { // 开启SocketChannel
     assert(!channel, "Attempt to re-open channel");
     var hubUrl = session.hubUrl();
@@ -363,24 +372,18 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
         openChannel(); // 开启SocketChannel
         require(["ui"], function (ui) {
           TogetherJS.running = true; //将运行状态设为true
-          ui.prepareUI(); //UI加载前的回调事件
-          var features = ["peers", "ui", "chat", "webrtc", "cursor", "startup", "videos", "forms", "visibilityApi"];//依赖包
+          ui.prepareUI(); // 页面加载toolbar的函数
+          var features = ["peers", "ui", "chat", "webrtc", "cursor", "startup", "forms", "visibilityApi"]; //依赖包 "videos", 
           require(features, function () {
             $(function () {
-              peers = require("peers");// 加载peers代码
+              peers = require("peers"); // 加载peers代码
               var startup = require("startup"); //加载startup代码
-              session.emit("start");// 调用其他模块添加的start回调
+              session.emit("start"); // 调用其他模块添加的start回调
               session.once("ui-ready", function () { //监听ui加载完毕事件
                 readyForMessages = true;
-                startup.start(); // 页面start
+                startup.start(); // 进行初始化检测等流程
               });
               ui.activateUI();
-              TogetherJS.config.close("enableAnalytics");
-              if (TogetherJS.config.get("enableAnalytics")) {
-                require(["analytics"], function (analytics) {
-                  analytics.activate();
-                });
-              }
               peers._SelfLoaded.then(function () {
                 sendHello(false);
               });
