@@ -327,10 +327,10 @@
       );
     };
     proto.emit = function emit(name) {
-      //将待清除事件集合缓存到offs变量上,遍历listeners时有可能会操作_listenerOffs集合
+      //将待清除事件集合缓存到offs变量上(因为遍历listeners时有可能会操作_listenerOffs集合)
       var offs = this._listenerOffs = [];
       if (!this._listeners || !this._listeners[name])
-        return; // 没有注册事件,直接返回
+        return;
       var args = Array.prototype.slice.call(arguments, 1);
       this._listeners[name].forEach(callback => {
         callback.apply(this, args); //依次触发绑定的回调函数

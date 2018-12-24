@@ -12,7 +12,7 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
   var localStoragePrefix = "togetherjs."; // This is the key we use for localStorage:
   var MAX_SESSION_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-  var session = util.mixinEvents(util.Module("session")); // 创建一个session类
+  var session = util.mixinEvents(util.Module("session")); // 创建一个session类,并注入eventListener
   session.shareId = null; // roomId
   session.clientId = null; // 标识客户端的ID
   session.router = channels.Router(); //
