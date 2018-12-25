@@ -6,20 +6,20 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
   var peers = util.Module("peers");
   var assert = util.assert;
   var CHECK_ACTIVITY_INTERVAL = 10 * 1000; // Every 10 seconds see if someone has gone idle
-  var IDLE_TIME = 3 * 60 * 1000; // Idle time is 3 minutes
+  var IDLE_TIME = 3 * 60 * 1000; // 空闲时长上线为3minutes minutes Idle time is 3 minutes
   var TAB_IDLE_TIME = 2 * 60 * 1000; // When you tab away, after two minutes you'll say you are idle
-  var BYE_TIME = 10 * 60 * 1000; // After 10 minutes of inactivity the person is considered to be "gone"
+  var BYE_TIME = 10 * 60 * 1000; // 不活动10分钟后会被认为掉线 After 10 minutes of inactivity the person is considered to be "gone"
   var ui;
   require(["ui"], function (uiModule) {
     ui = uiModule;
   });
-  var DEFAULT_NICKNAMES = templates("names").split(/,\s*/g);
+  var DEFAULT_NICKNAMES = templates("names").split(/,\s*/g); // 获取默认用户名集合.
   var Peer = util.Class({
     isSelf: false,
     constructor: function (id, attrs) {
-      attrs = attrs || {};
       assert(id);
       assert(!Peer.peers[id]);
+      attrs = attrs || {};
       this.id = id;
       this.identityId = attrs.identityId || null;
       this.status = attrs.status || "live";
@@ -34,14 +34,11 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
       var joined = attrs.joined || false;
       if (attrs.fromHelloMessage) {
         this.updateFromHello(attrs.fromHelloMessage);
-        if (attrs.fromHelloMessage.type == "hello") {
+        if (attrs.fromHelloMessage.type == "hello")
           joined = true;
-        }
       }
       peers.emit("new-peer", this);
-      if (joined) {
-        this.view.notifyJoined();
-      }
+      joined && this.view.notifyJoined();
       this.view.update();
     },
     repr: function () {
@@ -56,10 +53,10 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
         hash: this.hash,
         title: this.title,
         identityId: this.identityId,
-        rtcSupported: this.rtcSupported,
         name: this.name,
         avatar: this.avatar,
         color: this.color,
+        rtcSupported: this.rtcSupported, //是否开启webrtc功能
         following: this.following
       };
     },
@@ -75,7 +72,7 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
       }
       if (this.status == "bye") //切换为live状态
         this.unbye();
-      this.lastMessageDate = Date.now();//更新最后操作时间
+      this.lastMessageDate = Date.now(); //更新最后操作时间
     },
     updateFromHello: function (msg) { // 根据msg更新用户信息
       var urlUpdated = false;
@@ -125,7 +122,7 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
         this.idle = "active";
         peers.emit("idle-updated", this);
       }
-      if (msg.rtcSupported) // 更新RTC功能
+      if (msg.rtcSupported) // 更改rtc配置属性
         peers.emit("rtc-supported", this);
       if (urlUpdated) // 更新url信息
         peers.emit("url-updated", this);
@@ -192,6 +189,7 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
       this.view.update();
     }
   });
+
   // FIXME: I can't decide where this should actually go, seems weird
   // that it is emitted and handled in the same module
   session.on("follow-peer", function (peer) {
@@ -400,6 +398,7 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
     )
   );
   peers._SelfLoaded = util.Deferred();
+
   function serialize() {
     var peers = [];
     util.forEachAttr(Peer.peers, function (peer) {
@@ -409,6 +408,7 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
       peers: peers
     };
   }
+
   function deserialize(obj) {
     if (!obj) {
       return;
@@ -447,6 +447,7 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
     });
     return result;
   };
+
   function checkActivity() {
     var ps = peers.getAllPeers();
     var now = Date.now();
@@ -518,6 +519,7 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
     // FIXME: not certain if this should be tab local or not:
     storeSerialization();
   }, false);
+
   function storeSerialization() {
     storage.tab.set("peerCache", serialize());
   }

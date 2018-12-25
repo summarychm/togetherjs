@@ -19,7 +19,8 @@ Methods:
 */
 define(["util"], function (util) {
   var channels = util.Module("channels"); // Channel类实例(挂载WebSocket)
-  /* Subclasses must define:
+  /* 
+  Subclasses must define:
   - ._send(string)
   - ._setupConnection()
   - ._ready()
@@ -73,14 +74,18 @@ define(["util"], function (util) {
         address = address.replace(/^http/i, 'ws');
       this.address = address;
       this.socket = null;
-      this._reopening = false;
       this._lastConnectTime = 0;
       this._backoff = 0;
       this.baseConstructor(); // 调用基类AbstractChannel的初始化方法
     },
-    backoffTime: 50, // Milliseconds to add to each reconnect time
+    /******** 错误重连 begin ********/
+    _reopening = false, // 是否处于错误重连的状态
+    backoffTime: 50, // 错误重试的基数 Milliseconds to add to each reconnect time
     maxBackoffTime: 1500,
-    backoffDetection: 2000, // Amount of time since last connection attempt that shows we need to back off
+    backoffDetection: 2000, //错误重试的时间最大值 Amount of time since last connection attempt that shows we need to back off
+    // this._setupConnection 方法中,通过this.socket.onclose方法中递归调用来实现错误重连
+    /******** 错误重连 end ********/
+
     toString: function () {
       var s = '[WebSocketChannel to ' + this.address;
       if (!this.socket)
@@ -97,7 +102,7 @@ define(["util"], function (util) {
       this.socket = new WebSocket(this.address); //创建webSocket对象
       this.socket.onopen = (function () {
         this._flush(); //处理积压的队列请求
-        this._reopening = false;
+        this._reopening = false; // 撤销重连状态
       }).bind(this);
       this.socket.onmessage = (function (event) {
         this._incoming(event.data); // 调用基类的处理方法
@@ -112,14 +117,14 @@ define(["util"], function (util) {
           method = "log"; // FIXME: should I even log clean closes?
         console[method]('WebSocket close', event.wasClean ? 'clean' : 'unclean',
           'code:', event.code, 'reason:', event.reason || 'none');
-        if (!this.closed) { //
-          this._reopening = true;
+        if (!this.closed) {
+          this._reopening = true; //设置当前socketConnection处于错误重连的状态
           if (Date.now() - this._lastConnectTime > this.backoffDetection)
             this._backoff = 0;
           else
             this._backoff++;
           var time = Math.min(this._backoff * this.backoffTime, this.maxBackoffTime);
-          setTimeout((function () {
+          setTimeout((function () { // 定期进行错误重连
             this._setupConnection();
           }).bind(this), time);
         }
@@ -303,43 +308,38 @@ define(["util"], function (util) {
       this.emit("close");
     }
   });
-  channels.Router = util.Class(util.mixinEvents({
+  channels.Router = util.Class(util.mixinEvents({ //创建
     constructor: function (channel) {
       this._channelMessage = this._channelMessage.bind(this);
       this._channelClosed = this._channelClosed.bind(this);
-      this._routes = Object.create(null);
-      if (channel) {
-        this.bindChannel(channel);
-      }
+      this._routes = Object.create(null); // 存储routes集合 {id:route}
+      channel && this.bindChannel(channel); // 给当前channel绑定新的监听,只监听type=route的message
     },
-    bindChannel: function (channel) {
-      if (this.channel) {
+    bindChannel: function (channel) { // 给当前channel绑定新的监听,只监听type=route的message
+      if (this.channel) { //移除原有监听,并重新添加
         this.channel.removeListener("message", this._channelMessage);
         this.channel.removeListener("close", this._channelClosed);
       }
       this.channel = channel;
-      this.channel.on("message", this._channelMessage.bind(this));
-      this.channel.on("close", this._channelClosed.bind(this));
+      this.channel.on("message", this._channelMessage.bind(this)); //添加新的message监听
+      this.channel.on("close", this._channelClosed.bind(this)); //添加新的close监听
     },
-    _channelMessage: function (msg) {
+    _channelMessage: function (msg) { // 处理type为route的message监听函数
       if (msg.type == "route") {
         var id = msg.routeId;
-        var route = this._routes[id];
-        if (!route) {
-          console.warn("No route with the id", id);
-          return;
-        }
-        if (msg.close) {
+        var route = this._routes[id]; // channel实例
+        if (!route)
+          return console.warn("No route with the id", id);
+        if (msg.close) //关闭路由
           this._closeRoute(route.id);
-        } else {
-          if (route.onmessage) {
-            route.onmessage(msg.message);
-          }
-          route.emit("message", msg.message);
+        else {
+          // 这种
+          route.onmessage && route.onmessage(msg.message); // 触发channel原有的onmessage方法
+          route.emit("message", msg.message); // 触发channel绑定的route路由回调
         }
       }
     },
-    _channelClosed: function () {
+    _channelClosed: function () { // type为route的close监听函数
       for (var id in this._routes) {
         this._closeRoute(id);
       }
@@ -352,32 +352,33 @@ define(["util"], function (util) {
       route.emit("close");
       delete this._routes[id];
     },
-    makeRoute: function (id) {
-      id = id || util.generateId();
-      var route = Route(this, id);
-      this._routes[id] = route;
-      return route;
-    }
+    // makeRoute: function (id) { // 创建一个Route暂时无用
+    //   id = id || util.generateId();
+    //   var route = Route(this, id);
+    //   this._routes[id] = route;
+    //   return route;
+    // }
   }));
-  var Route = util.Class(util.mixinEvents({
-    constructor: function (router, id) {
-      this.router = router;
-      this.id = id;
-    },
-    send: function (msg) {
-      this.router.channel.send({
-        type: "route",
-        routeId: this.id,
-        message: msg
-      });
-    },
-    close: function () {
-      if (this.router._routes[this.id] !== this) {
-        // This route instance has been overwritten, so ignore
-        return;
-      }
-      delete this.router._routes[this.id];
-    }
-  }));
+
+  // // 用于和makeRoute搭配,暂时无用
+  // var Route = util.Class(util.mixinEvents({
+  //   constructor: function (router, id) {
+  //     this.router = router;
+  //     this.id = id;
+  //   },
+  //   send: function (msg) { // 调用其channel上的send方法,发送type="route"类型的事件
+  //     this.router.channel.send({
+  //       type: "route",
+  //       routeId: this.id,
+  //       message: msg
+  //     });
+  //   },
+  //   close: function () {
+  //     // This route instance has been overwritten, so ignore
+  //     if (this.router._routes[this.id] !== this)
+  //       return;
+  //     delete this.router._routes[this.id];
+  //   }
+  // }));
   return channels;
 });
