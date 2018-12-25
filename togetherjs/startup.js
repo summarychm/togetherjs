@@ -1,13 +1,15 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
-/* This module handles all the different UI that happens (sometimes in order) when
-   TogetherJS is started:
-   - Introduce the session when you've been invited
-   - Show any browser compatibility indicators
-   - Show the walkthrough the first time
-   - Show the share link window
-   When everything is done it fires session.emit("startup-ready")
+/* 
+首次启动TogetherJS时界面UI显示逻辑处理
+This module handles all the different UI that happens (sometimes in order) when
+   TogetherJS is started: (TogetherJS启动)
+   - Introduce the session when you've been invited (介绍当前会议)
+   - Show any browser compatibility indicators (浏览器兼容相关)
+   - Show the walkthrough the first time ()
+   - Show the share link window (显示共享房间链接窗口)
+   When everything is done it fires session.emit("startup-ready") 全部准备完成后广播 "startup-ready"
 */
 define(["util", "require", "jquery", "windowing", "storage"], function (util, require, $, windowing, storage) {
   var assert = util.assert;
@@ -22,7 +24,7 @@ define(["util", "require", "jquery", "windowing", "storage"], function (util, re
     "share"
   ];
   var currentStep = null;
-  startup.start = function () {
+  startup.start = function () { // 采用next()中间件的方式,实现页面UI展示
     if (!session) { //保证session必须存在
       require(["session"], function (sessionModule) {
         session = sessionModule; // 加载session模块
@@ -37,24 +39,23 @@ define(["util", "require", "jquery", "windowing", "storage"], function (util, re
     if (index >= STEPS.length) //全部加载完毕,则触发"startup-ready"事件
       return session.emit("startup-ready");
     currentStep = STEPS[index];
-    handlers[currentStep](startup.start);
+    handlers[currentStep](startup.start); //next()中间件递归调用
   };
   var handlers = {
-    browserBroken: function (next) { //初始检测
-      if (window.WebSocket) //浏览器基础环境监测
+    browserBroken: function (next) { //浏览器是否支持webSocket监测
+      if (window.WebSocket)
         return next();
-      windowing.show("#togetherjs-browser-broken", {
+      windowing.show("#togetherjs-browser-broken", { //浏览器不支持websocket
         onClose: function () {
           session.close();
         }
       });
-      if ($.browser.msie)
-        $("#togetherjs-browser-broken-is-ie").show();
+      $.browser.msie && $("#togetherjs-browser-broken-is-ie").show();
     },
-    browserUnsupported: function (next) { // 空
+    browserUnsupported: function (next) { // 空方法
       next();
     },
-    sessionIntro: function (next) { // 显示joinRoom提示
+    sessionIntro: function (next) { // 控制是否显示joinRoom对话框(firstRun)
       if ((!session.isClient) || !session.firstRun)
         return next();
       TogetherJS.config.close("suppressJoinConfirmation");
@@ -74,7 +75,7 @@ define(["util", "require", "jquery", "windowing", "storage"], function (util, re
         session.close("declined-join");
       });
     },
-    walkthrough: function (next) {// 是否显示help
+    walkthrough: function (next) { // 是否显示help(新手入门)
       storage.settings.get("seenIntroDialog").then(function (seenIntroDialog) {
         if (seenIntroDialog)
           return next();
@@ -86,17 +87,13 @@ define(["util", "require", "jquery", "windowing", "storage"], function (util, re
         });
       });
     },
-    share: function (next) {
+    share: function (next) { // 控制是否显示邀请链接窗口
       TogetherJS.config.close("suppressInvite");
-      if (session.isClient || (!session.firstRun) ||
-        TogetherJS.config.get("suppressInvite")) {
-        next();
-        return;
-      }
+      if (session.isClient || (!session.firstRun) || TogetherJS.config.get("suppressInvite"))
+        return next();
       require(["windowing"], function (windowing) {
         windowing.show("#togetherjs-share");
-        // FIXME: no way to detect when the window is closed
-        // If there was a next() step then it would not work
+        // FIXME: no way to detect when the window is closed If there was a next() step then it would not work
       });
     }
   };

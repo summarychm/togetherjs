@@ -1,7 +1,7 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
-// 成员列表类
+
 define(["util", "session", "storage", "require", "templates"], function (util, session, storage, require, templates) {
   var peers = util.Module("peers");
   var assert = util.assert;
@@ -9,11 +9,12 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
   var IDLE_TIME = 3 * 60 * 1000; // 空闲时长上线为3minutes minutes Idle time is 3 minutes
   var TAB_IDLE_TIME = 2 * 60 * 1000; // When you tab away, after two minutes you'll say you are idle
   var BYE_TIME = 10 * 60 * 1000; // 不活动10分钟后会被认为掉线 After 10 minutes of inactivity the person is considered to be "gone"
+  var DEFAULT_NICKNAMES = templates("names").split(/,\s*/g); // 获取默认用户名集合.
   var ui;
   require(["ui"], function (uiModule) {
     ui = uiModule;
   });
-  var DEFAULT_NICKNAMES = templates("names").split(/,\s*/g); // 获取默认用户名集合.
+
   var Peer = util.Class({
     isSelf: false,
     constructor: function (id, attrs) {
@@ -27,18 +28,18 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
       this.name = attrs.name || null;
       this.avatar = attrs.avatar || null;
       this.color = attrs.color || "#00FF00";
-      this.view = ui.PeerView(this);
+      this.view = ui.PeerView(this); //uiView
       this.lastMessageDate = 0;
       this.following = attrs.following || false;
       Peer.peers[id] = this;
       var joined = attrs.joined || false;
       if (attrs.fromHelloMessage) {
-        this.updateFromHello(attrs.fromHelloMessage);
+        this.updateFromHello(attrs.fromHelloMessage); //根据msg更新user信息
         if (attrs.fromHelloMessage.type == "hello")
           joined = true;
       }
-      peers.emit("new-peer", this);
-      joined && this.view.notifyJoined();
+      peers.emit("new-peer", this); //广播new-peer事件
+      joined && this.view.notifyJoined(); // 通知新用户加入?
       this.view.update();
     },
     repr: function () {
@@ -74,7 +75,7 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
         this.unbye();
       this.lastMessageDate = Date.now(); //更新最后操作时间
     },
-    updateFromHello: function (msg) { // 根据msg更新用户信息
+    updateFromHello: function (msg) { // 根据msg更新自身信息,并广播对应的属性变化事件.
       var urlUpdated = false;
       var activeRTC = false;
       var identityUpdated = false;
@@ -135,12 +136,10 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
     update: function (attrs) {
       // FIXME: should probably test that only a couple attributes are settable
       // particularly status and idle
-      if (attrs.idle) {
+      if (attrs.idle)
         this.idle = attrs.idle;
-      }
-      if (attrs.status) {
+      if (attrs.status)
         this.status = attrs.status;
-      }
       this.view.update();
     },
     className: function (prefix) {

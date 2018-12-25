@@ -151,7 +151,7 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
           var features = ["peers", "ui", "startup", "chat", "webrtc", "cursor", "forms", "visibilityApi"]; //依赖包 "videos",
           require(features, function () {
             $(function () {
-              peers = require("peers"); // 加载peers代码
+              peers = require("peers"); //创建peers类实例
               var startup = require("startup"); //加载startup代码
               session.emit("start"); // 调用其他模块添加的start回调
               session.once("ui-ready", function () { //监听ui加载完毕事件
