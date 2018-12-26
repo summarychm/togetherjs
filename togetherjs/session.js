@@ -148,21 +148,21 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
         require(["ui"], function (ui) {
           TogetherJS.running = true; //将运行状态设为true
           ui.prepareUI(); // 页面加载toolbar元素的函数
-          var features = ["peers", "ui", "startup", "chat", "webrtc", "cursor", "forms", "visibilityApi"]; //依赖包 "videos",
+          var features = ["peers", "ui", "startup", "chat", "webrtc", "cursor", "forms", "visibilityApi"]; //依赖包
           require(features, function () {
             $(function () {
               peers = require("peers"); //创建peers类实例
               var startup = require("startup"); //加载startup代码
               session.emit("start"); // 调用其他模块添加的start回调
               session.once("ui-ready", function () { //监听ui加载完毕事件
-                readyForMessages = true;
-                startup.start(); // 进行初始化检测等流程,TODO: 待详查
+                readyForMessages = true; //UI加载完毕
+                startup.start(); // 首次启动TogetherJS时界面UI显示逻辑处理
               });
               ui.activateUI(); // UI加载完毕后的回调
               peers._SelfLoaded.then(function () {
                 sendHello(false);
               });
-              TogetherJS.emit("ready");
+              TogetherJS.emit("ready"); //广播ready事件
             });
           });
         });

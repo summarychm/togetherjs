@@ -69,9 +69,8 @@ define(["jquery", "jqueryPlugins"], function ($) {
     return name.replace(/[^a-zA-Z0-9_\-]/g, "_") || "class";
   };
   util.AssertionError = function (message) {
-    if (!this instanceof util.AssertionError) {
+    if (!this instanceof util.AssertionError)
       return new util.AssertionError(message);
-    }
     this.message = message;
     this.name = "AssertionError";
   };
@@ -245,6 +244,7 @@ define(["jquery", "jqueryPlugins"], function ($) {
           check();
         });
       });
+
       function check() {
         if (!count) {
           if (anyError) {

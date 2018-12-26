@@ -95,11 +95,9 @@
     }
   }
   if (!baseUrl) {
-    console.warn(
-      "Could not determine TogetherJS's baseUrl (looked for a <script> with togetherjs.js and togetherjs-min.js)"
-    );
+    console.warn("Could not determine TogetherJS's baseUrl (looked for a <script> with togetherjs.js and togetherjs-min.js)");
   }
-  var defaultHubBase = "https://hub.togetherjs.mozillalabs.com";
+  var defaultHubBase = "https://hub.togetherjs.com";
   defaultConfiguration.hubBase = defaultHubBase;
   /******** baseUrl end ********/
   /******** TogetherJ主体类 begin ********/

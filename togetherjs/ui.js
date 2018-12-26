@@ -3,32 +3,30 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 define(["require", "jquery", "util", "session", "templates", "templating", "linkify", "peers", "windowing", "tinycolor", "elementFinder", "visibilityApi"], function (require, $, util, session, templates, templating, linkify, peers, windowing, tinycolor, elementFinder, visibilityApi) {
+  var ANIMATION_DURATION = 1000; // This is also in togetherjs.less, under .togetherjs-animated
+  var NEW_USER_FADE_TIMEOUT = 5000; // Time the new user window sticks around until it fades away:
+
   var assert = util.assert;
   var chat;
   var $window = $(window);
   var ui = util.Module('ui'); //创建UI类实例
   var AssertionError = util.AssertionError;
   // This is also in togetherjs.less, as @button-height:
-  var BUTTON_HEIGHT = 60 + 1; // 60 is button height, 1 is border
+  var BUTTON_HEIGHT = 60 + 1; //每个选项的高度 60 is button height, 1 is border
   // chat TextArea
   var TEXTAREA_LINE_HEIGHT = 30; // 用户输入框默认高度
-  var TEXTAREA_MAX_LINES = 5;
-  // This is also in togetherjs.less, under .togetherjs-animated
-  var ANIMATION_DURATION = 1000;
-  // Time the new user window sticks around until it fades away:
-  var NEW_USER_FADE_TIMEOUT = 5000;
-  // This is set when an animation will keep the UI from being ready
-  // (until this time):
+  var TEXTAREA_MAX_LINES = 5; //最大行数
+
+  // This is set when an animation will keep the UI from being ready (until this time):
   var finishedAt = null;
-  // Time in milliseconds for the dock to animate out:
-  var DOCK_ANIMATION_TIME = 300;
+  var DOCK_ANIMATION_TIME = 300; // Time in milliseconds for the dock to animate out:
   // If two chat messages come from the same person in this time
   // (milliseconds) then they are collapsed into one message:
   var COLLAPSE_MESSAGE_LIMIT = 5000;
   var COLORS = [
     "#8A2BE2", "#7FFF00", "#DC143C", "#00FFFF", "#8FBC8F", "#FF8C00", "#FF00FF",
     "#FFD700", "#F08080", "#90EE90", "#FF6347"
-  ];
+  ]; // 随机颜色
   // This would be a circular import, but we just need the chat module sometime
   // after everything is loaded, and this is sure to complete by that time:
   require(["chat"], function (c) {
@@ -95,9 +93,9 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
     }
     var container = ui.container = $(templates("interface")); //加载容器模板
     assert(container.length);
-    $("body").append(container); // 将容器追加到界面上
+    $("body").append(container); // 将TogetherJS容器追加到界面上
     fixupAvatars(container); // 设置固定头像
-    if (session.firstRun && TogetherJS.startTarget) { //动画
+    if (session.firstRun && TogetherJS.startTarget) { //动画,并且有
       // Time at which the UI will be fully ready:
       // (We have to do this because the offset won't be quite right
       // until the animation finishes - attempts to calculate the
@@ -768,7 +766,8 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       el.removeClass("togetherjs-started");
     }
   });
-  ui.chat = {
+
+  ui.chat = { //会话相关
     text: function (attrs) {
       assert(typeof attrs.text == "string");
       assert(attrs.peer);
@@ -782,8 +781,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       if (lastEl) {
         lastDate = parseInt(lastEl.attr("data-date"), 10);
       }
-      if (lastEl && lastEl.attr("data-person") == attrs.peer.id &&
-        lastDate && date < lastDate + COLLAPSE_MESSAGE_LIMIT) {
+      if (lastEl && lastEl.attr("data-person") == attrs.peer.id && lastDate && date < lastDate + COLLAPSE_MESSAGE_LIMIT) {
         lastEl.attr("data-date", date);
         var content = lastEl.find(".togetherjs-chat-content");
         assert(content.length);
@@ -800,7 +798,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
       el.attr("data-person", attrs.peer.id)
         .attr("data-date", date)
         .attr("data-message-id", attrs.messageId);
-      ui.chat.add(el, attrs.messageId, attrs.notify);
+      ui.chat.add(el, attrs.messageId, attrs.notify); // 将消息追加到自己的chat界面上
     },
     joinedSession: function (attrs) {
       assert(attrs.peer);
