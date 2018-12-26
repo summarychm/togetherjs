@@ -61,13 +61,13 @@
       }
     }
   }
-  /******** 尝试从配置/localStorage中 读取baseUrl begin ********/
+  /******** 尝试从配置变量/localStorage中 读取baseUrl begin ********/
   var baseUrl = "__baseUrl__";
   if (window.TogetherJSConfig && window.TogetherJSConfig.baseUrl)
     baseUrl = window.TogetherJSConfig.baseUrl;
   if (window.TogetherJSConfig_baseUrl)
     baseUrl = window.TogetherJSConfig_baseUrl;
-  defaultConfiguration.baseUrl = baseUrl;
+  defaultConfiguration.baseUrl = baseUrl; // 应用全局配置中的baseUrl
   var baseUrlOverride = localStorage.getItem("togetherjs.baseUrlOverride");
   if (baseUrlOverride) {
     try {
@@ -77,9 +77,9 @@
     }
     if (!baseUrlOverride || baseUrlOverride.expiresAt < Date.now())
       localStorage.removeItem("togetherjs.baseUrlOverride");
-    else baseUrl = baseUrlOverride.baseUrl;
+    else baseUrl = baseUrlOverride.baseUrl; // 应用localSorage中的baseUrlOverride.baseUrl
   }
-  if (!baseUrl) {
+  if (!baseUrl) { // 尝试将baseUrl设置为togetherjs所在的url
     var scripts = document.getElementsByTagName("script");
     for (var i = 0; i < scripts.length; i++) {
       var src = scripts[i].src;
@@ -94,9 +94,8 @@
       }
     }
   }
-  if (!baseUrl) {
+  if (!baseUrl)
     console.warn("Could not determine TogetherJS's baseUrl (looked for a <script> with togetherjs.js and togetherjs-min.js)");
-  }
   var defaultHubBase = "https://hub.togetherjs.com";
   defaultConfiguration.hubBase = defaultHubBase;
   /******** baseUrl end ********/
